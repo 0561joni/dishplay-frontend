@@ -31,16 +31,12 @@ export function AuthForm() {
         const { error } = await supabase.auth.signUp({
           email,
           password,
-          options: {
-            emailRedirectTo: undefined,
-          }
         });
         
         if (error) {
           setError(error.message);
         } else {
-          // User should be automatically signed in
-          setError('Account created successfully!');
+          setError('Account created successfully! You can now log in.');
         }
       }
     } catch (error) {
