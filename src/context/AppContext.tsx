@@ -127,29 +127,31 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const initializeAuth = async () => {
       try {
         console.log('Initializing auth...');
-        const { data: { session } } = await supabase.auth.getSession();
+        const sessionPromise = supabase.auth.getSession();
+        dispatch({ type: 'SET_INITIALIZED', payload: true });
+        const { data: { session } } = await sessionPromise;
         console.log('Session:', session);
-        
+
         if (session?.user) {
-          try {
-            const profile = await getUserProfile(session.user.id);
-            const user: User = {
-              ...profile,
-              isAuthenticated: true
-            };
-            dispatch({ type: 'SET_USER', payload: user });
-            console.log('User profile loaded:', user);
-          } catch (profileError) {
-            console.error('Error loading user profile:', profileError);
-            // User exists in auth but not in our users table, sign them out
-            await supabase.auth.signOut();
-          }
+          getUserProfile(session.user.id)
+            .then(profile => {
+              const user: User = {
+                ...profile,
+                isAuthenticated: true
+              };
+              dispatch({ type: 'SET_USER', payload: user });
+              console.log('User profile loaded:', user);
+            })
+            .catch(async profileError => {
+              console.error('Error loading user profile:', profileError);
+              // User exists in auth but not in our users table, sign them out
+              await supabase.auth.signOut();
+            });
         }
       } catch (error) {
         console.error('Error initializing auth:', error);
       } finally {
         console.log('Auth initialization complete');
-        dispatch({ type: 'SET_INITIALIZED', payload: true });
       }
     };
 
