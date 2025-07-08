@@ -19,29 +19,36 @@ export function AuthForm() {
     
     try {
       if (isLogin) {
+        console.log('Attempting to sign in...');
         const { error } = await supabase.auth.signInWithPassword({
           email,
           password,
         });
         
         if (error) {
+          console.error('Sign in error:', error);
           setError(error.message);
+        } else {
+          console.log('Sign in successful');
         }
       } else {
+        console.log('Attempting to sign up...');
         const { error } = await supabase.auth.signUp({
           email,
           password,
         });
         
         if (error) {
+          console.error('Sign up error:', error);
           setError(error.message);
         } else {
-          setError('Account created successfully! You can now log in.');
+          console.log('Sign up successful');
+          // Don't show success message, let the auth state change handle it
         }
       }
     } catch (error) {
-      setError('An unexpected error occurred');
       console.error('Auth error:', error);
+      setError('An unexpected error occurred');
     } finally {
       setIsLoading(false);
     }

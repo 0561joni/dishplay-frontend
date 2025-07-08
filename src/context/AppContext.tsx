@@ -126,19 +126,29 @@ export function AppProvider({ children }: { children: ReactNode }) {
     // Initialize auth state
     const initializeAuth = async () => {
       try {
+        console.log('Initializing auth...');
         const { data: { session } } = await supabase.auth.getSession();
+        console.log('Session:', session);
         
         if (session?.user) {
-          const profile = await getUserProfile(session.user.id);
-          const user: User = {
-            ...profile,
-            isAuthenticated: true
-          };
-          dispatch({ type: 'SET_USER', payload: user });
+          try {
+            const profile = await getUserProfile(session.user.id);
+            const user: User = {
+              ...profile,
+              isAuthenticated: true
+            };
+            dispatch({ type: 'SET_USER', payload: user });
+            console.log('User profile loaded:', user);
+          } catch (profileError) {
+            console.error('Error loading user profile:', profileError);
+            // User exists in auth but not in our users table, sign them out
+            await supabase.auth.signOut();
+          }
         }
       } catch (error) {
         console.error('Error initializing auth:', error);
       } finally {
+        console.log('Auth initialization complete');
         dispatch({ type: 'SET_INITIALIZED', payload: true });
       }
     };
@@ -148,6 +158,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        console.log('Auth state changed:', event, session);
         if (event === 'SIGNED_IN' && session?.user) {
           try {
             const profile = await getUserProfile(session.user.id);
@@ -156,10 +167,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
               isAuthenticated: true
             };
             dispatch({ type: 'SET_USER', payload: user });
+            console.log('User signed in:', user);
           } catch (error) {
             console.error('Error fetching user profile:', error);
+            // If profile doesn't exist, sign out the user
+            await supabase.auth.signOut();
           }
         } else if (event === 'SIGNED_OUT') {
+          console.log('User signed out');
           dispatch({ type: 'LOGOUT' });
         }
       }
