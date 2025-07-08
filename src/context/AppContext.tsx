@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useReducer, ReactNode } from 'react';
 import { User, MenuItem, CartItem, Menu, Language } from '../types';
+import { api, getAuthToken, removeAuthToken } from '../utils/api';
 
 interface AppState {
   user: User | null;
@@ -19,6 +20,7 @@ type AppAction =
   | { type: 'SET_LANGUAGE'; payload: Language }
   | { type: 'SET_LOADING'; payload: boolean }
   | { type: 'CYCLE_IMAGE'; payload: { itemId: string; direction: 'next' | 'prev' } };
+  | { type: 'LOGOUT' };
 
 const initialState: AppState = {
   user: null,
@@ -37,6 +39,10 @@ function appReducer(state: AppState, action: AppAction): AppState {
   switch (action.type) {
     case 'SET_USER':
       return { ...state, user: action.payload };
+    
+    case 'LOGOUT':
+      removeAuthToken();
+      return { ...state, user: null, currentMenu: null, cart: [] };
     
     case 'SET_MENU':
       return { ...state, currentMenu: action.payload };

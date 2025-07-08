@@ -1,12 +1,16 @@
 import React from 'react';
-import { ShoppingCart, User, Utensils } from 'lucide-react';
+import { ShoppingCart, User, Utensils, LogOut } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { translate } from '../utils/translations';
 import { LanguageSelector } from './LanguageSelector';
 
 export function Header() {
-  const { state } = useApp();
+  const { state, dispatch } = useApp();
   const cartItemCount = state.cart.reduce((sum, item) => sum + item.quantity, 0);
+
+  const handleLogout = () => {
+    dispatch({ type: 'LOGOUT' });
+  };
 
   return (
     <header className="bg-white shadow-sm border-b border-gray-200">
@@ -37,11 +41,20 @@ export function Header() {
             {/* User */}
             <div className="flex items-center gap-3">
               {state.user ? (
-                <div className="flex items-center gap-2">
-                  <User className="w-6 h-6 text-gray-600" />
-                  <span className="text-sm font-medium text-gray-700">
-                    {state.user.credits} {translate('credits', state.language)}
-                  </span>
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-2">
+                    <User className="w-6 h-6 text-gray-600" />
+                    <span className="text-sm font-medium text-gray-700">
+                      {state.user.credits} {translate('credits', state.language)}
+                    </span>
+                  </div>
+                  <button
+                    onClick={handleLogout}
+                    className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                    title="Logout"
+                  >
+                    <LogOut className="w-5 h-5 text-gray-600" />
+                  </button>
                 </div>
               ) : (
                 <button className="bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors">

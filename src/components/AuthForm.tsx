@@ -2,25 +2,38 @@ import React, { useState } from 'react';
 import { Mail, Lock, User } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { translate } from '../utils/translations';
+import { api, setAuthToken, handleApiError } from '../utils/api';
 
 export function AuthForm() {
   const { state, dispatch } = useApp();
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsLoading(true);
+    setError('');
     
-    // Mock authentication
-    const mockUser = {
-      id: '1',
-      email: email,
-      credits: 100,
-      isAuthenticated: true
-    };
+    try {
+      const response = isLogin 
+        ? await api.auth.login(email, password)
+        : await api.auth.signup(email, password);
 
-    dispatch({ type: 'SET_USER', payload: mockUser });
+      if (response.success) {
+        setAuthToken(response.token);
+        dispatch({ type: 'SET_USER', payload: response.user });
+      } else {
+        setError(response.message || 'Authentication failed');
+      }
+    } catch (error) {
+      const errorResult = handleApiError(error);
+      setError(errorResult.message);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -68,11 +81,25 @@ export function AuthForm() {
             </div>
           </div>
 
+          {error && (
+            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+              {error}
+            </div>
+          )}
+
           <button
             type="submit"
-            className="w-full bg-blue-600 text-white py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors"
+            disabled={isLoading}
+            className="w-full bg-blue-600 text-white py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {isLogin ? translate('login', state.language) : translate('signup', state.language)}
+            {isLoading ? (
+              <div className="flex items-center justify-center gap-2">
+                <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                {isLogin ? 'Signing in...' : 'Creating account...'}
+              </div>
+            ) : (
+              isLogin ? translate('login', state.language) : translate('signup', state.language)
+            )}
           </button>
         </form>
 

@@ -2,12 +2,13 @@ import React, { useCallback } from 'react';
 import { Upload, Image } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { translate } from '../utils/translations';
-import { mockMenu } from '../utils/mockData';
+import { api, getAuthToken, handleApiError } from '../utils/api';
 
 export function MenuUpload() {
   const { state, dispatch } = useApp();
+  const [error, setError] = useState('');
 
-  const handleFileUpload = useCallback((files: FileList | null) => {
+  const handleFileUpload = useCallback(async (files: FileList | null) => {
     if (!files || files.length === 0) return;
 
     const file = files[0];
@@ -18,13 +19,29 @@ export function MenuUpload() {
       return;
     }
 
+    const token = getAuthToken();
+    if (!token) {
+      setError('Please log in to upload menus');
+      return;
+    }
+
     dispatch({ type: 'SET_LOADING', payload: true });
+    setError('');
     
-    // Simulate processing delay
-    setTimeout(() => {
-      dispatch({ type: 'SET_MENU', payload: mockMenu });
+    try {
+      const response = await api.menu.upload(file, token);
+      
+      if (response.success) {
+        dispatch({ type: 'SET_MENU', payload: response.menu });
+      } else {
+        setError(response.message || 'Failed to process menu');
+      }
+    } catch (error) {
+      const errorResult = handleApiError(error);
+      setError(errorResult.message);
+    } finally {
       dispatch({ type: 'SET_LOADING', payload: false });
-    }, 2000);
+    }
   }, [dispatch]);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
