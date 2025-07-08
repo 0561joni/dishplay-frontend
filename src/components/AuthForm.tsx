@@ -2,10 +2,10 @@ import React, { useState } from 'react';
 import { Mail, Lock, User } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { translate } from '../utils/translations';
-import { api, setAuthToken, handleApiError } from '../utils/api';
+import { supabase } from '../lib/supabase';
 
 export function AuthForm() {
-  const { state, dispatch } = useApp();
+  const { state } = useApp();
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -18,19 +18,30 @@ export function AuthForm() {
     setError('');
     
     try {
-      const response = isLogin 
-        ? await api.auth.login(email, password)
-        : await api.auth.signup(email, password);
-
-      if (response.success) {
-        setAuthToken(response.token);
-        dispatch({ type: 'SET_USER', payload: response.user });
+      if (isLogin) {
+        const { error } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+        
+        if (error) {
+          setError(error.message);
+        }
       } else {
-        setError(response.message || 'Authentication failed');
+        const { error } = await supabase.auth.signUp({
+          email,
+          password,
+        });
+        
+        if (error) {
+          setError(error.message);
+        } else {
+          setError('Please check your email for verification link');
+        }
       }
     } catch (error) {
-      const errorResult = handleApiError(error);
-      setError(errorResult.message);
+      setError('An unexpected error occurred');
+      console.error('Auth error:', error);
     } finally {
       setIsLoading(false);
     }
@@ -77,12 +88,17 @@ export function AuthForm() {
                 onChange={(e) => setPassword(e.target.value)}
                 className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 required
+                minLength={6}
               />
             </div>
           </div>
 
           {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+            <div className={`border px-4 py-3 rounded-lg text-sm ${
+              error.includes('check your email') 
+                ? 'bg-blue-50 border-blue-200 text-blue-700'
+                : 'bg-red-50 border-red-200 text-red-700'
+            }`}>
               {error}
             </div>
           )}

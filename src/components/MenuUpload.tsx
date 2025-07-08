@@ -1,8 +1,9 @@
-import React, { useCallback } from 'react';
-import { Upload, Image } from 'lucide-react';
+import React, { useCallback, useState } from 'react';
+import { Upload } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { translate } from '../utils/translations';
 import { api, getAuthToken, handleApiError } from '../utils/api';
+import { createMenu, updateMenuStatus, createMenuItems, createItemImages } from '../lib/supabase';
 
 export function MenuUpload() {
   const { state, dispatch } = useApp();
@@ -15,12 +16,11 @@ export function MenuUpload() {
     const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg', 'application/pdf'];
     
     if (!allowedTypes.includes(file.type)) {
-      alert('Please upload a valid image file (JPG, PNG) or PDF');
+      setError('Please upload a valid image file (JPG, PNG) or PDF');
       return;
     }
 
-    const token = getAuthToken();
-    if (!token) {
+    if (!state.user) {
       setError('Please log in to upload menus');
       return;
     }
@@ -29,20 +29,79 @@ export function MenuUpload() {
     setError('');
     
     try {
+      // Create menu record in Supabase
+      const menu = await createMenu(state.user.id);
+      
+      // Get auth token for API call
+      const token = await getAuthToken();
+      if (!token) {
+        throw new Error('Authentication token not available');
+      }
+
+      // Call backend API to process the menu
       const response = await api.menu.upload(file, token);
       
       if (response.success) {
-        dispatch({ type: 'SET_MENU', payload: response.menu });
+        // Update menu status to completed
+        await updateMenuStatus(menu.id, 'completed');
+        
+        // Create menu items in Supabase
+        const menuItems = await createMenuItems(menu.id, response.items.map((item: any, index: number) => ({
+          item_name: item.name,
+          description: item.description,
+          price: item.price,
+          currency: 'USD',
+          order_index: index
+        })));
+
+        // Create item images for each menu item
+        for (let i = 0; i < menuItems.length; i++) {
+          const menuItem = menuItems[i];
+          const responseItem = response.items[i];
+          
+          if (responseItem.images && responseItem.images.length > 0) {
+            await createItemImages(menuItem.id, responseItem.images.map((imageUrl: string, imageIndex: number) => ({
+              image_url: imageUrl,
+              source: 'api',
+              is_primary: imageIndex === 0
+            })));
+          }
+        }
+
+        // Transform data for frontend
+        const transformedMenu = {
+          id: menu.id,
+          user_id: menu.user_id,
+          original_image_url: menu.original_image_url,
+          processed_at: menu.processed_at,
+          status: 'completed' as const,
+          name: response.restaurantName || 'Uploaded Menu',
+          items: menuItems.map((item, index) => ({
+            id: item.id,
+            menu_id: item.menu_id,
+            item_name: item.item_name,
+            description: item.description,
+            price: item.price,
+            currency: item.currency,
+            order_index: item.order_index,
+            images: response.items[index]?.images || [],
+            currentImageIndex: 0
+          }))
+        };
+
+        dispatch({ type: 'SET_MENU', payload: transformedMenu });
       } else {
+        await updateMenuStatus(menu.id, 'failed');
         setError(response.message || 'Failed to process menu');
       }
     } catch (error) {
+      console.error('Menu upload error:', error);
       const errorResult = handleApiError(error);
       setError(errorResult.message);
     } finally {
       dispatch({ type: 'SET_LOADING', payload: false });
     }
-  }, [dispatch]);
+  }, [dispatch, state.user]);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -92,6 +151,12 @@ export function MenuUpload() {
           </div>
         </label>
       </div>
+
+      {error && (
+        <div className="mt-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+          {error}
+        </div>
+      )}
 
       {state.isLoading && (
         <div className="mt-8 text-center">

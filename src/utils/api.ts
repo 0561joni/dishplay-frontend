@@ -1,40 +1,6 @@
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://dishplay.onrender.com';
 
 export const api = {
-  // Authentication endpoints
-  auth: {
-    login: async (email: string, password: string) => {
-      const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email, password }),
-      });
-      return response.json();
-    },
-    
-    signup: async (email: string, password: string) => {
-      const response = await fetch(`${API_BASE_URL}/api/auth/signup`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email, password }),
-      });
-      return response.json();
-    },
-    
-    verify: async (token: string) => {
-      const response = await fetch(`${API_BASE_URL}/api/auth/verify`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-      return response.json();
-    },
-  },
-
   // Menu processing endpoints
   menu: {
     upload: async (file: File, token: string) => {
@@ -48,6 +14,11 @@ export const api = {
         },
         body: formData,
       });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
       return response.json();
     },
     
@@ -57,6 +28,11 @@ export const api = {
           'Authorization': `Bearer ${token}`,
         },
       });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
       return response.json();
     },
     
@@ -66,6 +42,11 @@ export const api = {
           'Authorization': `Bearer ${token}`,
         },
       });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
       return response.json();
     },
   },
@@ -81,6 +62,11 @@ export const api = {
         },
         body: JSON.stringify({ itemId, language }),
       });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
       return response.json();
     },
   },
@@ -96,6 +82,11 @@ export const api = {
         },
         body: JSON.stringify({ itemName, description }),
       });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
       return response.json();
     },
   },
@@ -108,6 +99,11 @@ export const api = {
           'Authorization': `Bearer ${token}`,
         },
       });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
       return response.json();
     },
     
@@ -120,6 +116,11 @@ export const api = {
         },
         body: JSON.stringify({ credits }),
       });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
       return response.json();
     },
   },
@@ -130,9 +131,11 @@ export const handleApiError = (error: any) => {
   console.error('API Error:', error);
   
   if (error.status === 401) {
-    // Handle unauthorized - redirect to login
-    localStorage.removeItem('authToken');
-    window.location.href = '/login';
+    // Handle unauthorized - will be handled by Supabase auth
+    return {
+      success: false,
+      message: 'Authentication required. Please log in.',
+    };
   }
   
   return {
@@ -141,17 +144,20 @@ export const handleApiError = (error: any) => {
   };
 };
 
-// Helper function to get auth token
-export const getAuthToken = (): string | null => {
-  return localStorage.getItem('authToken');
+// Helper function to get auth token from Supabase
+export const getAuthToken = async (): Promise<string | null> => {
+  const { supabase } = await import('../lib/supabase');
+  const { data: { session } } = await supabase.auth.getSession();
+  return session?.access_token || null;
 };
 
-// Helper function to set auth token
+// These functions are kept for compatibility but will use Supabase auth
 export const setAuthToken = (token: string): void => {
-  localStorage.setItem('authToken', token);
+  // Supabase handles token storage automatically
+  console.log('Token management handled by Supabase');
 };
 
-// Helper function to remove auth token
 export const removeAuthToken = (): void => {
-  localStorage.removeItem('authToken');
+  // Supabase handles token removal automatically
+  console.log('Token removal handled by Supabase');
 };

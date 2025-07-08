@@ -3,13 +3,14 @@ import { ShoppingCart, User, Utensils, LogOut } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { translate } from '../utils/translations';
 import { LanguageSelector } from './LanguageSelector';
+import { supabase } from '../lib/supabase';
 
 export function Header() {
-  const { state, dispatch } = useApp();
+  const { state } = useApp();
   const cartItemCount = state.cart.reduce((sum, item) => sum + item.quantity, 0);
 
-  const handleLogout = () => {
-    dispatch({ type: 'LOGOUT' });
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
   };
 
   return (

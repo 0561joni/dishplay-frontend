@@ -1,15 +1,24 @@
 export interface User {
   id: string;
   email: string;
+  first_name?: string | null;
+  last_name?: string | null;
+  birthday?: string | null;
+  gender?: string | null;
   credits: number;
+  created_at: string;
+  updated_at: string;
   isAuthenticated: boolean;
 }
 
 export interface MenuItem {
   id: string;
-  name: string;
-  description: string;
+  menu_id: string;
+  item_name: string;
+  description: string | null;
   price: number | null;
+  currency: string | null;
+  order_index: number | null;
   images: string[];
   currentImageIndex: number;
 }
@@ -22,9 +31,20 @@ export interface CartItem {
 
 export interface Menu {
   id: string;
-  name: string;
+  user_id: string;
+  original_image_url: string | null;
+  processed_at: string;
+  status: 'processing' | 'completed' | 'failed';
+  name: string; // Derived from processing
   items: MenuItem[];
-  uploadedAt: Date;
+}
+
+export interface ItemImage {
+  id: string;
+  menu_item_id: string;
+  image_url: string;
+  source: string | null;
+  is_primary: boolean | null;
 }
 
 export type Language = 'en' | 'fr' | 'de' | 'es';

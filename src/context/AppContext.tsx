@@ -1,6 +1,6 @@
-import React, { createContext, useContext, useReducer, ReactNode } from 'react';
+import React, { createContext, useContext, useReducer, useEffect, ReactNode } from 'react';
 import { User, MenuItem, CartItem, Menu, Language } from '../types';
-import { api, getAuthToken, removeAuthToken } from '../utils/api';
+import { supabase, getCurrentUser, getUserProfile } from '../lib/supabase';
 
 interface AppState {
   user: User | null;
@@ -8,6 +8,7 @@ interface AppState {
   cart: CartItem[];
   language: Language;
   isLoading: boolean;
+  isInitialized: boolean;
 }
 
 type AppAction =
@@ -19,6 +20,7 @@ type AppAction =
   | { type: 'CLEAR_CART' }
   | { type: 'SET_LANGUAGE'; payload: Language }
   | { type: 'SET_LOADING'; payload: boolean }
+  | { type: 'SET_INITIALIZED'; payload: boolean }
   | { type: 'CYCLE_IMAGE'; payload: { itemId: string; direction: 'next' | 'prev' } }
   | { type: 'LOGOUT' };
 
@@ -27,7 +29,8 @@ const initialState: AppState = {
   currentMenu: null,
   cart: [],
   language: 'en',
-  isLoading: false
+  isLoading: false,
+  isInitialized: false
 };
 
 const AppContext = createContext<{
@@ -41,7 +44,6 @@ function appReducer(state: AppState, action: AppAction): AppState {
       return { ...state, user: action.payload };
     
     case 'LOGOUT':
-      removeAuthToken();
       return { ...state, user: null, currentMenu: null, cart: [] };
     
     case 'SET_MENU':
@@ -89,6 +91,9 @@ function appReducer(state: AppState, action: AppAction): AppState {
     case 'SET_LOADING':
       return { ...state, isLoading: action.payload };
     
+    case 'SET_INITIALIZED':
+      return { ...state, isInitialized: action.payload };
+    
     case 'CYCLE_IMAGE':
       if (!state.currentMenu) return state;
       
@@ -115,6 +120,52 @@ function appReducer(state: AppState, action: AppAction): AppState {
 
 export function AppProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(appReducer, initialState);
+
+  useEffect(() => {
+    // Initialize auth state
+    const initializeAuth = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (session?.user) {
+          const profile = await getUserProfile(session.user.id);
+          const user: User = {
+            ...profile,
+            isAuthenticated: true
+          };
+          dispatch({ type: 'SET_USER', payload: user });
+        }
+      } catch (error) {
+        console.error('Error initializing auth:', error);
+      } finally {
+        dispatch({ type: 'SET_INITIALIZED', payload: true });
+      }
+    };
+
+    initializeAuth();
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        if (event === 'SIGNED_IN' && session?.user) {
+          try {
+            const profile = await getUserProfile(session.user.id);
+            const user: User = {
+              ...profile,
+              isAuthenticated: true
+            };
+            dispatch({ type: 'SET_USER', payload: user });
+          } catch (error) {
+            console.error('Error fetching user profile:', error);
+          }
+        } else if (event === 'SIGNED_OUT') {
+          dispatch({ type: 'LOGOUT' });
+        }
+      }
+    );
+
+    return () => subscription.unsubscribe();
+  }, []);
 
   return (
     <AppContext.Provider value={{ state, dispatch }}>
