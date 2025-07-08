@@ -19,7 +19,7 @@ type AppAction =
   | { type: 'CLEAR_CART' }
   | { type: 'SET_LANGUAGE'; payload: Language }
   | { type: 'SET_LOADING'; payload: boolean }
-  | { type: 'CYCLE_IMAGE'; payload: { itemId: string; direction: 'next' | 'prev' } };
+  | { type: 'CYCLE_IMAGE'; payload: { itemId: string; direction: 'next' | 'prev' } }
   | { type: 'LOGOUT' };
 
 const initialState: AppState = {
