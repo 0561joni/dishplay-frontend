@@ -127,9 +127,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const initializeAuth = async () => {
       try {
         console.log('Initializing auth...');
+        a60vsd-codex/optimize-initializeauth-for-quicker-startup
         const sessionPromise = supabase.auth.getSession();
         dispatch({ type: 'SET_INITIALIZED', payload: true });
         const { data: { session } } = await sessionPromise;
+
         console.log('Session:', session);
 
         if (session?.user) {
