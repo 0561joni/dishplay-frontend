@@ -127,7 +127,7 @@ export const api = {
 };
 
 // Helper function to handle API errors
-export const handleApiError = (error: any) => {
+export const handleApiError = (error: unknown) => {
   console.error('API Error:', error);
   
   if (error.status === 401) {
@@ -140,7 +140,7 @@ export const handleApiError = (error: any) => {
   
   return {
     success: false,
-    message: error.message || 'An unexpected error occurred',
+    message: (error as { message?: string }).message || 'An unexpected error occurred',
   };
 };
 
@@ -152,7 +152,7 @@ export const getAuthToken = async (): Promise<string | null> => {
 };
 
 // These functions are kept for compatibility but will use Supabase auth
-export const setAuthToken = (token: string): void => {
+export const setAuthToken = (): void => {
   // Supabase handles token storage automatically
   console.log('Token management handled by Supabase');
 };

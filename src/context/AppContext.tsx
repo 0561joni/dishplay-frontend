@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useReducer, useEffect, ReactNode } from 'react';
 import { User, MenuItem, CartItem, Menu, Language } from '../types';
-import { supabase, getCurrentUser, getUserProfile } from '../lib/supabase';
+import { supabase, getUserProfile } from '../lib/supabase';
 
 interface AppState {
   user: User | null;
@@ -49,7 +49,7 @@ function appReducer(state: AppState, action: AppAction): AppState {
     case 'SET_MENU':
       return { ...state, currentMenu: action.payload };
     
-    case 'ADD_TO_CART':
+    case 'ADD_TO_CART': {
       const existingItem = state.cart.find(item => item.id === action.payload.id);
       if (existingItem) {
         return {
@@ -65,6 +65,7 @@ function appReducer(state: AppState, action: AppAction): AppState {
         ...state,
         cart: [...state.cart, { id: action.payload.id, menuItem: action.payload, quantity: 1 }]
       };
+    }
     
     case 'REMOVE_FROM_CART':
       return {
