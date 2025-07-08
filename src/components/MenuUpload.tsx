@@ -46,13 +46,16 @@ export function MenuUpload() {
         await updateMenuStatus(menu.id, 'completed');
         
         // Create menu items in Supabase
-        const menuItems = await createMenuItems(menu.id, response.items.map((item: any, index: number) => ({
+      const menuItems = await createMenuItems(
+        menu.id,
+        response.items.map((item: { name: string; description?: string; price?: number }, index: number) => ({
           item_name: item.name,
           description: item.description,
           price: item.price,
           currency: 'USD',
           order_index: index
-        })));
+        }))
+      );
 
         // Create item images for each menu item
         for (let i = 0; i < menuItems.length; i++) {
