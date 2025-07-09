@@ -11,6 +11,7 @@ export function Header() {
   const cartItemCount = state.cart.reduce((sum, item) => sum + item.quantity, 0);
 
   const handleLogout = async () => {
+    if (!supabase) return;
     await supabase.auth.signOut();
   };
 

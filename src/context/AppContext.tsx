@@ -13,6 +13,7 @@ interface AppState {
   language: Language;
   isLoading: boolean;
   isInitialized: boolean;
+  initError: string | null;
 }
 
 type AppAction =
@@ -25,6 +26,7 @@ type AppAction =
   | { type: 'SET_LANGUAGE'; payload: Language }
   | { type: 'SET_LOADING'; payload: boolean }
   | { type: 'SET_INITIALIZED'; payload: boolean }
+  | { type: 'SET_INIT_ERROR'; payload: string | null }
   | { type: 'CYCLE_IMAGE'; payload: { itemId: string; direction: 'next' | 'prev' } }
   | { type: 'LOGOUT' };
 
@@ -34,7 +36,8 @@ const initialState: AppState = {
   cart: [],
   language: 'en',
   isLoading: false,
-  isInitialized: false
+  isInitialized: false,
+  initError: null
 };
 
 const AppContext = createContext<{
@@ -98,6 +101,9 @@ function appReducer(state: AppState, action: AppAction): AppState {
     
     case 'SET_INITIALIZED':
       return { ...state, isInitialized: action.payload };
+
+    case 'SET_INIT_ERROR':
+      return { ...state, initError: action.payload };
     
     case 'CYCLE_IMAGE':
       if (!state.currentMenu) return state;
@@ -127,6 +133,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(appReducer, initialState);
 
   useEffect(() => {
+    if (!supabase) {
+      dispatch({
+        type: 'SET_INIT_ERROR',
+        payload:
+          'Supabase environment variables are missing. Please define VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.'
+      });
+      dispatch({ type: 'SET_INITIALIZED', payload: true });
+      return;
+    }
+
     const initializeAuth = async (): Promise<void> => {
       // If already initializing, wait for the existing initialization
       if (isInitializing && initializationPromise) {
