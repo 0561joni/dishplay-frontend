@@ -128,7 +128,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
       try {
         console.log('Initializing auth...');
         const { data: { session } } = await supabase.auth.getSession();
-        dispatch({ type: 'SET_INITIALIZED', payload: true });
         console.log('Session:', session);
 
         if (session?.user) {
@@ -150,6 +149,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       } catch (error) {
         console.error('Error initializing auth:', error);
       } finally {
+        dispatch({ type: 'SET_INITIALIZED', payload: true });
         console.log('Auth initialization complete');
       }
     };
