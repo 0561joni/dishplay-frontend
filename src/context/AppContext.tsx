@@ -211,8 +211,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
       try {
         await Promise.race([
           initializeAuth(),
-          new Promise((_, reject) => 
-            setTimeout(() => reject(new Error('Initialization timeout')), 10000)
+          new Promise((_, reject) =>
+            setTimeout(
+              () => reject(new Error('Initialization timeout')),
+              30000
+            )
           )
         ]);
       } catch (error) {
@@ -231,10 +234,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
       async (event, session) => {
         console.log('Auth state changed:', event, session);
         
-        // Don't process auth changes during initialization
+        // Process auth changes even if initialization is still running
         if (isInitializing) {
-          console.log('Skipping auth state change during initialization');
-          return;
+          console.log('Auth state change occurred during initialization');
         }
         
         if (event === 'SIGNED_IN' && session?.user) {

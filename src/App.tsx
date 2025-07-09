@@ -10,19 +10,6 @@ function AppContent() {
   const { state } = useApp();
   const [currentView, setCurrentView] = useState<'upload' | 'menu' | 'cart'>('upload');
 
-  // Show loading screen while initializing
-  if (!state.isInitialized) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-2 border-blue-600 border-t-transparent mx-auto mb-4"></div>
-          <p className="text-gray-600">Initializing application...</p>
-          <p className="text-xs text-gray-400 mt-2">Check console for details</p>
-        </div>
-      </div>
-    );
-  }
-
   if (state.initError) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -39,6 +26,25 @@ function AppContent() {
         <Header />
         <div className="py-12">
           <AuthForm />
+          {!state.isInitialized && (
+            <div className="mt-4 flex items-center justify-center gap-2 text-gray-600">
+              <div className="animate-spin rounded-full h-4 w-4 border-2 border-blue-600 border-t-transparent"></div>
+              <span className="text-sm">Initializing...</span>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // Show loading screen while user data is loading
+  if (!state.isInitialized) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-2 border-blue-600 border-t-transparent mx-auto mb-4"></div>
+          <p className="text-gray-600">Initializing application...</p>
+          <p className="text-xs text-gray-400 mt-2">Check console for details</p>
         </div>
       </div>
     );
