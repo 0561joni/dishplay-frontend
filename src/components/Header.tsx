@@ -31,15 +31,17 @@ export function Header() {
           <div className="flex items-center gap-6">
             <LanguageSelector />
             
-            {/* Cart */}
-            <button className="relative p-2 hover:bg-gray-100 rounded-full transition-colors">
-              <ShoppingCart className="w-6 h-6 text-gray-600" />
-              {cartItemCount > 0 && (
-                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                  {cartItemCount}
-                </span>
-              )}
-            </button>
+            {/* Cart - only show when user is logged in */}
+            {state.user && (
+              <button className="relative p-2 hover:bg-gray-100 rounded-full transition-colors">
+                <ShoppingCart className="w-6 h-6 text-gray-600" />
+                {cartItemCount > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                    {cartItemCount}
+                  </span>
+                )}
+              </button>
+            )}
 
             {/* User */}
             <div className="flex items-center gap-3">
@@ -54,11 +56,7 @@ export function Header() {
                     <LogOut className="w-5 h-5 text-gray-600" />
                   </button>
                 </div>
-              ) : (
-                <button className="bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors">
-                  {translate('login', state.language)}
-                </button>
-              )}
+              ) : null}
             </div>
           </div>
         </div>
