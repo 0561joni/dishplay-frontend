@@ -1,8 +1,9 @@
 import React from 'react';
-import { ShoppingCart, User, Utensils, LogOut } from 'lucide-react';
+import { ShoppingCart, Utensils, LogOut } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { translate } from '../utils/translations';
 import { LanguageSelector } from './LanguageSelector';
+import { PlanSelector } from './PlanSelector';
 import { supabase } from '../lib/supabase';
 
 export function Header() {
@@ -43,12 +44,7 @@ export function Header() {
             <div className="flex items-center gap-3">
               {state.user ? (
                 <div className="flex items-center gap-4">
-                  <div className="flex items-center gap-2">
-                    <User className="w-6 h-6 text-gray-600" />
-                    <span className="text-sm font-medium text-gray-700">
-                      {state.user.credits} {translate('credits', state.language)}
-                    </span>
-                  </div>
+                  <PlanSelector />
                   <button
                     onClick={handleLogout}
                     className="p-2 hover:bg-gray-100 rounded-full transition-colors"

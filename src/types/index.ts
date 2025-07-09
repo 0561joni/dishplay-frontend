@@ -6,6 +6,7 @@ export interface User {
   birthday?: string | null;
   gender?: string | null;
   credits: number;
+  plan?: 'light' | 'normal' | 'pro';
   created_at: string;
   updated_at: string;
   isAuthenticated: boolean;
@@ -48,6 +49,14 @@ export interface ItemImage {
 }
 
 export type Language = 'en' | 'fr' | 'de' | 'es';
+
+export interface Plan {
+  id: 'light' | 'normal' | 'pro';
+  name: string;
+  price: number;
+  features: string[];
+  popular?: boolean;
+}
 
 export interface Translation {
   [key: string]: {

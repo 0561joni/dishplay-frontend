@@ -37,51 +37,54 @@ function AppContent() {
   return (
     <div className="min-h-screen bg-gray-50">
       <Header />
-      
-      {/* Navigation */}
-      <nav className="bg-white shadow-sm">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex space-x-8">
-            <button
-              onClick={() => setCurrentView('upload')}
-              className={`py-4 px-2 border-b-2 font-medium text-sm ${
-                currentView === 'upload'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              Upload Menu
-            </button>
-            {state.currentMenu && (
-              <button
-                onClick={() => setCurrentView('menu')}
-                className={`py-4 px-2 border-b-2 font-medium text-sm ${
-                  currentView === 'menu'
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700'
-                }`}
-              >
-                View Menu
-              </button>
-            )}
-            {state.cart.length > 0 && (
-              <button
-                onClick={() => setCurrentView('cart')}
-                className={`py-4 px-2 border-b-2 font-medium text-sm ${
-                  currentView === 'cart'
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700'
-                }`}
-              >
-                Cart ({state.cart.length})
-              </button>
-            )}
-          </div>
-        </div>
-      </nav>
 
       {/* Main Content */}
-      <main className="py-8">
+      <main className="py-8 relative">
+        {/* Floating Navigation */}
+        {state.user && (
+          <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-40">
+            <div className="bg-white rounded-full shadow-lg border border-gray-200 px-2 py-2 flex items-center gap-2">
+              <button
+                onClick={() => setCurrentView('upload')}
+                className={`px-4 py-2 rounded-full font-medium text-sm transition-all duration-200 ${
+                  currentView === 'upload'
+                    ? 'bg-blue-600 text-white shadow-md'
+                    : 'text-gray-600 hover:bg-gray-100'
+                }`}
+              >
+                Upload
+              </button>
+              {state.currentMenu && (
+                <button
+                  onClick={() => setCurrentView('menu')}
+                  className={`px-4 py-2 rounded-full font-medium text-sm transition-all duration-200 ${
+                    currentView === 'menu'
+                      ? 'bg-blue-600 text-white shadow-md'
+                      : 'text-gray-600 hover:bg-gray-100'
+                  }`}
+                >
+                  Menu
+                </button>
+              )}
+              {state.cart.length > 0 && (
+                <button
+                  onClick={() => setCurrentView('cart')}
+                  className={`px-4 py-2 rounded-full font-medium text-sm transition-all duration-200 relative ${
+                    currentView === 'cart'
+                      ? 'bg-blue-600 text-white shadow-md'
+                      : 'text-gray-600 hover:bg-gray-100'
+                  }`}
+                >
+                  Cart
+                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                    {state.cart.length}
+                  </span>
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+        
         {currentView === 'upload' && <MenuUpload />}
         {currentView === 'menu' && <MenuDisplay />}
         {currentView === 'cart' && <Cart />}
