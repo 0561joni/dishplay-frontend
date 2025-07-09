@@ -15,8 +15,7 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
     persistSession: true,
     detectSessionInUrl: true,
     flowType: 'pkce',
-    storageKey: 'dishplay-auth-token',
-    storage: window.localStorage
+    storageKey: 'dishplay-auth-token'
   }
 });
 

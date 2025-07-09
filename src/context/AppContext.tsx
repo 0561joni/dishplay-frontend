@@ -2,6 +2,10 @@ import React, { createContext, useContext, useReducer, useEffect, ReactNode } fr
 import { User, MenuItem, CartItem, Menu, Language } from '../types';
 import { supabase, getUserProfile } from '../lib/supabase';
 
+// Global flag to prevent multiple initialization attempts across tabs
+let isInitializing = false;
+let initializationPromise: Promise<void> | null = null;
+
 interface AppState {
   user: User | null;
   currentMenu: Menu | null;
@@ -123,43 +127,98 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(appReducer, initialState);
 
   useEffect(() => {
-    // Initialize auth state
-    const initializeAuth = async () => {
-      try {
-        console.log('Initializing auth...');
-        const { data: { session } } = await supabase.auth.getSession();
-        console.log('Session:', session);
+    const initializeAuth = async (): Promise<void> => {
+      // If already initializing, wait for the existing initialization
+      if (isInitializing && initializationPromise) {
+        await initializationPromise;
+        return;
+      }
 
-        if (session?.user) {
-          getUserProfile(session.user.id)
-            .then(profile => {
-              const user: User = {
-                ...profile,
-                isAuthenticated: true
-              };
-              dispatch({ type: 'SET_USER', payload: user });
-              console.log('User profile loaded:', user);
-            })
-            .catch(async profileError => {
-              console.error('Error loading user profile:', profileError);
-              // User exists in auth but not in our users table, sign them out
-              await supabase.auth.signOut();
-            });
+      // If already initialized in another tab, check session immediately
+      if (localStorage.getItem('dishplay-initialized') === 'true') {
+        try {
+          const { data: { session } } = await supabase.auth.getSession();
+          if (session?.user) {
+            const profile = await getUserProfile(session.user.id);
+            const user: User = {
+              ...profile,
+              isAuthenticated: true
+            };
+            dispatch({ type: 'SET_USER', payload: user });
+          }
+        } catch (error) {
+          console.error('Error loading existing session:', error);
+        } finally {
+          dispatch({ type: 'SET_INITIALIZED', payload: true });
         }
+        return;
+      }
+
+      // Mark as initializing
+      isInitializing = true;
+      
+      // Create initialization promise
+      initializationPromise = (async () => {
+        try {
+          console.log('Initializing auth...');
+          const { data: { session } } = await supabase.auth.getSession();
+          console.log('Session:', session);
+
+          if (session?.user) {
+            const profile = await getUserProfile(session.user.id);
+            const user: User = {
+              ...profile,
+              isAuthenticated: true
+            };
+            dispatch({ type: 'SET_USER', payload: user });
+            console.log('User profile loaded:', user);
+          }
+        } catch (error) {
+          console.error('Error initializing auth:', error);
+        } finally {
+          // Mark as initialized in localStorage for other tabs
+          localStorage.setItem('dishplay-initialized', 'true');
+          dispatch({ type: 'SET_INITIALIZED', payload: true });
+          isInitializing = false;
+          initializationPromise = null;
+          console.log('Auth initialization complete');
+        }
+      })();
+
+      await initializationPromise;
+    };
+
+    // Add timeout to prevent infinite loading
+    const initWithTimeout = async () => {
+      try {
+        await Promise.race([
+          initializeAuth(),
+          new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Initialization timeout')), 10000)
+          )
+        ]);
       } catch (error) {
-        console.error('Error initializing auth:', error);
-      } finally {
+        console.error('Initialization failed or timed out:', error);
         dispatch({ type: 'SET_INITIALIZED', payload: true });
-        console.log('Auth initialization complete');
+      } finally {
+        isInitializing = false;
+        initializationPromise = null;
       }
     };
 
-    initializeAuth();
+    initWithTimeout();
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         console.log('Auth state changed:', event, session);
+        
+        // Don't process auth changes during initialization
+        if (isInitializing) {
+          console.log('Skipping auth state change during initialization');
+          return;
+        }
+        
         if (event === 'SIGNED_IN' && session?.user) {
           try {
             const profile = await getUserProfile(session.user.id);
@@ -176,12 +235,35 @@ export function AppProvider({ children }: { children: ReactNode }) {
           }
         } else if (event === 'SIGNED_OUT') {
           console.log('User signed out');
+          localStorage.removeItem('dishplay-initialized');
           dispatch({ type: 'LOGOUT' });
         }
       }
     );
 
-    return () => subscription.unsubscribe();
+    // Listen for storage changes to sync initialization across tabs
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'dishplay-initialized' && e.newValue === 'true' && !state.isInitialized) {
+        dispatch({ type: 'SET_INITIALIZED', payload: true });
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+
+    return () => {
+      subscription.unsubscribe();
+      window.removeEventListener('storage', handleStorageChange);
+    };
+  }, []);
+
+  // Clear initialization flag when component unmounts
+  useEffect(() => {
+    return () => {
+      if (isInitializing) {
+        isInitializing = false;
+        initializationPromise = null;
+      }
+    };
   }, []);
 
   return (
