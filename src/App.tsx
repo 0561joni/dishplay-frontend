@@ -23,6 +23,16 @@ function AppContent() {
     );
   }
 
+  if (state.initError) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+          {state.initError}
+        </div>
+      </div>
+    );
+  }
+
   if (!state.user) {
     return (
       <div className="min-h-screen bg-gray-50">

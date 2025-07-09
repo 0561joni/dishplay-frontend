@@ -147,6 +147,10 @@ export const handleApiError = (error: unknown) => {
 // Helper function to get auth token from Supabase
 export const getAuthToken = async (): Promise<string | null> => {
   const { supabase } = await import('../lib/supabase');
+  if (!supabase) {
+    console.error('Supabase client not initialized');
+    return null;
+  }
   const { data: { session } } = await supabase.auth.getSession();
   return session?.access_token || null;
 };
@@ -159,5 +163,4 @@ export const setAuthToken = (): void => {
 
 export const removeAuthToken = (): void => {
   // Supabase handles token removal automatically
-  console.log('Token removal handled by Supabase');
-};
+  console.log('Token removal handled by Supabase');};

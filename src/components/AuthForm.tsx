@@ -16,6 +16,12 @@ export function AuthForm() {
     e.preventDefault();
     setIsLoading(true);
     setError('');
+
+    if (!supabase) {
+      setError('Supabase is not configured.');
+      setIsLoading(false);
+      return;
+    }
     
     try {
       if (isLogin) {

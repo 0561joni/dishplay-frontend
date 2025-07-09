@@ -1,4 +1,4 @@
-import { createClient } from '@supabase/supabase-js';
+import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { Database } from '../types/database';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
@@ -6,18 +6,23 @@ const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
 
 if (!supabaseUrl || !supabaseAnonKey) {
   // Avoid crashing the app during preview when env vars are not set
-  console.error('Supabase environment variables are missing');
+  console.error(
+    'Supabase environment variables are missing. Please define VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.'
+  );
 }
 
-export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    autoRefreshToken: true,
-    persistSession: true,
-    detectSessionInUrl: true,
-    flowType: 'pkce',
-    storageKey: 'dishplay-auth-token'
-  }
-});
+export const supabase: SupabaseClient<Database> | null =
+  supabaseUrl && supabaseAnonKey
+    ? createClient<Database>(supabaseUrl, supabaseAnonKey, {
+        auth: {
+          autoRefreshToken: true,
+          persistSession: true,
+          detectSessionInUrl: true,
+          flowType: 'pkce',
+          storageKey: 'dishplay-auth-token'
+        }
+      })
+    : null;
 
 // Helper function to get current user
 export const getCurrentUser = async () => {
