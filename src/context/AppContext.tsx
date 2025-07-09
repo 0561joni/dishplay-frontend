@@ -142,6 +142,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
             const profile = await getUserProfile(session.user.id);
             const user: User = {
               ...profile,
+              plan: profile.plan || 'light',
               isAuthenticated: true
             };
             dispatch({ type: 'SET_USER', payload: user });
@@ -168,6 +169,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
             const profile = await getUserProfile(session.user.id);
             const user: User = {
               ...profile,
+              plan: profile.plan || 'light',
               isAuthenticated: true
             };
             dispatch({ type: 'SET_USER', payload: user });
@@ -224,6 +226,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
             const profile = await getUserProfile(session.user.id);
             const user: User = {
               ...profile,
+              plan: profile.plan || 'light',
               isAuthenticated: true
             };
             dispatch({ type: 'SET_USER', payload: user });
