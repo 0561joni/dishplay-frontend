@@ -5,7 +5,10 @@ export const api = {
   menu: {
     upload: async (file: File, token: string) => {
       const formData = new FormData();
-      formData.append('menu', file);
+      // The backend expects the uploaded file under the field name "file".
+      // Using a different field name causes FastAPI to reject the request
+      // with a 422 error. Align the field name with the backend parameter.
+      formData.append('file', file);
       
       const response = await fetch(`${API_BASE_URL}/api/menu/upload`, {
         method: 'POST',
