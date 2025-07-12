@@ -4,10 +4,16 @@ import { Database } from '../types/database';
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
 
+console.log('🔧 Supabase configuration:', {
+  hasUrl: !!supabaseUrl,
+  hasKey: !!supabaseAnonKey,
+  urlStart: supabaseUrl.substring(0, 30)
+});
+
 if (!supabaseUrl || !supabaseAnonKey) {
   // Avoid crashing the app during preview when env vars are not set
   console.error(
-    'Supabase environment variables are missing. Please define VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.'
+    '❌ Supabase environment variables are missing. Please define VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.'
   );
 }
 
