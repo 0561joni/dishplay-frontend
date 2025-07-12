@@ -135,12 +135,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
     let isMounted = true;
     let authListenerUnsubscribe: (() => void) | null = null;
     let initTimeout: NodeJS.Timeout | null = null;
+    let isInitComplete = false; // Track completion outside of state
     
     const initializeAuth = async () => {
       // Check if we should bypass auth (for testing)
       const bypassAuth = import.meta.env.VITE_BYPASS_AUTH === 'true';
       if (bypassAuth) {
         console.log('⚠️ Auth bypassed for testing');
+        isInitComplete = true;
         dispatch({ type: 'SET_INITIALIZED', payload: true });
         return;
       }
@@ -152,6 +154,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
             type: 'SET_INIT_ERROR',
             payload: 'Supabase environment variables are missing. Please define VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.'
           });
+          isInitComplete = true;
           dispatch({ type: 'SET_INITIALIZED', payload: true });
         }
         return;
@@ -159,8 +162,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
       // Set a maximum timeout for initialization
       initTimeout = setTimeout(() => {
-        if (isMounted && !state.isInitialized) {
+        if (isMounted && !isInitComplete) {
           console.warn('Initialization timeout reached');
+          isInitComplete = true;
           dispatch({ type: 'SET_INITIALIZED', payload: true });
           dispatch({ type: 'SET_INIT_ERROR', payload: 'Initialization timeout - please refresh the page' });
         }
@@ -266,6 +270,20 @@ export function AppProvider({ children }: { children: ReactNode }) {
         
         console.log('✨ Auth initialization completed successfully');
         
+        // Clear any errors since we completed successfully
+        if (isMounted) {
+          dispatch({ type: 'SET_INIT_ERROR', payload: null });
+          
+          // Mark as initialized and clear the timeout immediately
+          isInitComplete = true;
+          if (initTimeout) {
+            clearTimeout(initTimeout);
+            initTimeout = null;
+          }
+          dispatch({ type: 'SET_INITIALIZED', payload: true });
+          console.log('Auth initialization complete');
+        }
+        
       } catch (error) {
         console.error('💥 Critical error during auth initialization:', error);
         if (isMounted) {
@@ -273,11 +291,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
             type: 'SET_INIT_ERROR',
             payload: `Authentication initialization failed: ${error instanceof Error ? error.message : 'Unknown error'}`
           });
-        }
-      } finally {
-        if (isMounted) {
+          
+          // Mark as initialized even on error
+          isInitComplete = true;
+          if (initTimeout) {
+            clearTimeout(initTimeout);
+            initTimeout = null;
+          }
           dispatch({ type: 'SET_INITIALIZED', payload: true });
-          console.log('Auth initialization complete');
         }
       }
     };
