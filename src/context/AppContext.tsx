@@ -127,68 +127,115 @@ function appReducer(state: AppState, action: AppAction): AppState {
 
 export function AppProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(appReducer, initialState);
+  
+  // Debug mode - set via URL parameter ?debug=true
+  const debugMode = new URLSearchParams(window.location.search).get('debug') === 'true';
 
   useEffect(() => {
     let isMounted = true;
+    let authListenerUnsubscribe: (() => void) | null = null;
+    let initTimeout: NodeJS.Timeout | null = null;
     
-    if (!supabase) {
-      if (isMounted) {
-        dispatch({
-          type: 'SET_INIT_ERROR',
-          payload:
-            'Supabase environment variables are missing. Please define VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.'
-        });
-        dispatch({ type: 'SET_INITIALIZED', payload: true });
-      }
-      return;
-    }
-
     const initializeAuth = async () => {
-      try {
-        console.log('Initializing auth...');
-        
-        // Set a shorter timeout for getSession
-        const sessionPromise = supabase.auth.getSession();
-        const timeoutPromise = new Promise((_, reject) =>
-          setTimeout(() => reject(new Error('Session timeout')), 10000)
-        );
-        
-        const { data: { session }, error } = await Promise.race([
-          sessionPromise,
-          timeoutPromise
-        ]) as any;
-        
-        if (error) {
-          console.error('Session error:', error);
-          throw error;
-        }
-        
-        console.log('Session loaded:', session ? 'authenticated' : 'not authenticated');
-
-        if (session?.user && isMounted) {
-          try {
-            const profile = await getUserProfile(session.user.id);
-            const user: User = {
-              ...profile,
-              plan: profile.plan || 'light',
-              isAuthenticated: true
-            };
-            if (isMounted) {
-              dispatch({ type: 'SET_USER', payload: user });
-              console.log('User profile loaded:', user.email);
-            }
-          } catch (profileError) {
-            console.error('Error fetching user profile:', profileError);
-            // If profile doesn't exist, sign out the user
-            await supabase.auth.signOut();
-          }
-        }
-      } catch (error) {
-        console.error('Error initializing auth:', error);
+      // Check if Supabase is configured
+      if (!supabase) {
         if (isMounted) {
           dispatch({
             type: 'SET_INIT_ERROR',
-            payload: `Authentication initialization failed: ${error.message}`
+            payload: 'Supabase environment variables are missing. Please define VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.'
+          });
+          dispatch({ type: 'SET_INITIALIZED', payload: true });
+        }
+        return;
+      }
+
+      // Set a maximum timeout for initialization
+      initTimeout = setTimeout(() => {
+        if (isMounted && !state.isInitialized) {
+          console.warn('Initialization timeout reached');
+          dispatch({ type: 'SET_INITIALIZED', payload: true });
+          dispatch({ type: 'SET_INIT_ERROR', payload: 'Initialization timeout - please refresh the page' });
+        }
+      }, 30000); // 30 seconds max
+
+      try {
+        if (debugMode) console.log('🔍 Starting auth initialization...');
+        
+        // First, set up the auth state change listener
+        // This will catch any auth changes that happen during initialization
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(
+          async (event, session) => {
+            if (debugMode) console.log('🔄 Auth state changed:', event, session?.user?.email);
+            
+            if (!isMounted) {
+              return;
+            }
+            
+            if (event === 'SIGNED_IN' && session?.user) {
+              try {
+                const profile = await getUserProfile(session.user.id);
+                const user: User = {
+                  ...profile,
+                  plan: profile.plan || 'light',
+                  isAuthenticated: true
+                };
+                dispatch({ type: 'SET_USER', payload: user });
+                console.log('User signed in:', user.email);
+              } catch (error) {
+                console.error('Error fetching user profile on sign in:', error);
+                // Don't sign out here - let the user retry or handle it manually
+                dispatch({ type: 'SET_USER', payload: null });
+              }
+            } else if (event === 'SIGNED_OUT' || event === 'USER_DELETED') {
+              console.log('User signed out');
+              dispatch({ type: 'LOGOUT' });
+            }
+          }
+        );
+        
+        authListenerUnsubscribe = () => subscription.unsubscribe();
+        
+        // Now check for existing session
+        try {
+          const { data: { session }, error } = await supabase.auth.getSession();
+          
+          if (error) {
+            // Log the error but don't throw - user might just not be logged in
+            console.warn('Session check error:', error);
+          } else if (session?.user) {
+            console.log('Existing session found');
+            try {
+              const profile = await getUserProfile(session.user.id);
+              const user: User = {
+                ...profile,
+                plan: profile.plan || 'light',
+                isAuthenticated: true
+              };
+              if (isMounted) {
+                dispatch({ type: 'SET_USER', payload: user });
+                console.log('User profile loaded:', user.email);
+              }
+            } catch (profileError) {
+              console.error('Error fetching user profile:', profileError);
+              // Profile might not exist yet - this is okay for new users
+              if (isMounted) {
+                dispatch({ type: 'SET_USER', payload: null });
+              }
+            }
+          } else {
+            console.log('No existing session');
+          }
+        } catch (sessionError) {
+          // If getSession fails completely, just continue without a session
+          console.error('Failed to get session:', sessionError);
+        }
+        
+      } catch (error) {
+        console.error('Critical error during auth initialization:', error);
+        if (isMounted) {
+          dispatch({
+            type: 'SET_INIT_ERROR',
+            payload: `Authentication initialization failed: ${error instanceof Error ? error.message : 'Unknown error'}`
           });
         }
       } finally {
@@ -199,44 +246,20 @@ export function AppProvider({ children }: { children: ReactNode }) {
       }
     };
 
+    // Start initialization
     initializeAuth();
 
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        console.log('Auth state changed:', event, session);
-        
-        if (!isMounted) {
-          return;
-        }
-        
-        if (event === 'SIGNED_IN' && session?.user) {
-          try {
-            const profile = await getUserProfile(session.user.id);
-            const user: User = {
-              ...profile,
-              plan: profile.plan || 'light',
-              isAuthenticated: true
-            };
-            dispatch({ type: 'SET_USER', payload: user });
-            console.log('User signed in:', user);
-          } catch (error) {
-            console.error('Error fetching user profile:', error);
-            // If profile doesn't exist, sign out the user
-            await supabase.auth.signOut();
-          }
-        } else if (event === 'SIGNED_OUT') {
-          console.log('User signed out');
-          dispatch({ type: 'LOGOUT' });
-        }
-      }
-    );
-
+    // Cleanup function
     return () => {
       isMounted = false;
-      subscription.unsubscribe();
+      if (authListenerUnsubscribe) {
+        authListenerUnsubscribe();
+      }
+      if (initTimeout) {
+        clearTimeout(initTimeout);
+      }
     };
-  }, []);
+  }, []); // Empty dependency array - only run once on mount
 
   return (
     <AppContext.Provider value={{ state, dispatch }}>
