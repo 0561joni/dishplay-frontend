@@ -93,6 +93,12 @@ export function MenuUpload() {
         };
 
         dispatch({ type: 'SET_MENU', payload: transformedMenu });
+        
+        // Auto-navigate to menu view after successful processing
+        setTimeout(() => {
+          // This will be handled by the parent component
+          window.dispatchEvent(new CustomEvent('menuProcessed'));
+        }, 500);
       } else {
         await updateMenuStatus(menu.id, 'failed');
         setError(response.message || 'Failed to process menu');
@@ -116,12 +122,12 @@ export function MenuUpload() {
   }, []);
 
   return (
-    <div className="max-w-2xl mx-auto p-6">
-      <div className="text-center mb-8">
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">
+    <div className="max-w-2xl mx-auto p-4 sm:p-6">
+      <div className="text-center mb-6 sm:mb-8">
+        <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">
           {translate('uploadMenu', state.language)}
         </h2>
-        <p className="text-gray-600">
+        <p className="text-gray-600 text-sm sm:text-base">
           Upload your menu image and let us extract the items for you
         </p>
       </div>
@@ -129,7 +135,7 @@ export function MenuUpload() {
       <div
         onDrop={handleDrop}
         onDragOver={handleDragOver}
-        className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-blue-400 transition-colors cursor-pointer"
+        className="border-2 border-dashed border-gray-300 rounded-lg p-6 sm:p-8 text-center hover:border-blue-400 transition-colors cursor-pointer touch-manipulation"
       >
         <input
           type="file"
@@ -140,14 +146,14 @@ export function MenuUpload() {
         />
         <label htmlFor="menu-upload" className="cursor-pointer">
           <div className="flex flex-col items-center gap-4">
-            <div className="bg-blue-50 p-4 rounded-full">
-              <Upload className="w-8 h-8 text-blue-600" />
+            <div className="bg-blue-50 p-3 sm:p-4 rounded-full">
+              <Upload className="w-6 h-6 sm:w-8 sm:h-8 text-blue-600" />
             </div>
             <div>
-              <p className="text-lg font-medium text-gray-900 mb-1">
+              <p className="text-base sm:text-lg font-medium text-gray-900 mb-1">
                 {translate('dragDropText', state.language)}
               </p>
-              <p className="text-sm text-gray-500">
+              <p className="text-xs sm:text-sm text-gray-500">
                 Supports JPG, PNG, PDF (max 10MB)
               </p>
             </div>
@@ -162,7 +168,7 @@ export function MenuUpload() {
       )}
 
       {state.isLoading && (
-        <div className="mt-8 text-center">
+        <div className="mt-6 sm:mt-8 text-center">
           <div className="inline-flex items-center gap-2 text-blue-600">
             <div className="animate-spin rounded-full h-4 w-4 border-2 border-blue-600 border-t-transparent"></div>
             {translate('processing', state.language)}

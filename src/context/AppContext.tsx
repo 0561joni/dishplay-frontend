@@ -5,35 +5,37 @@ import { supabase, getUserProfile } from '../lib/supabase';
 interface AppState {
   user: User | null;
   currentMenu: Menu | null;
-  cart: CartItem[];
+  favorites: FavoriteItem[];
   language: Language;
   isLoading: boolean;
   isInitialized: boolean;
   initError: string | null;
+  isMobileMenuOpen: boolean;
 }
 
 type AppAction =
   | { type: 'SET_USER'; payload: User | null }
   | { type: 'SET_MENU'; payload: Menu | null }
-  | { type: 'ADD_TO_CART'; payload: MenuItem }
-  | { type: 'REMOVE_FROM_CART'; payload: string }
-  | { type: 'UPDATE_CART_QUANTITY'; payload: { id: string; quantity: number } }
-  | { type: 'CLEAR_CART' }
+  | { type: 'ADD_TO_FAVORITES'; payload: MenuItem }
+  | { type: 'REMOVE_FROM_FAVORITES'; payload: string }
+  | { type: 'CLEAR_FAVORITES' }
   | { type: 'SET_LANGUAGE'; payload: Language }
   | { type: 'SET_LOADING'; payload: boolean }
   | { type: 'SET_INITIALIZED'; payload: boolean }
   | { type: 'SET_INIT_ERROR'; payload: string | null }
   | { type: 'CYCLE_IMAGE'; payload: { itemId: string; direction: 'next' | 'prev' } }
+  | { type: 'TOGGLE_MOBILE_MENU' }
   | { type: 'LOGOUT' };
 
 const initialState: AppState = {
   user: null,
   currentMenu: null,
-  cart: [],
+  favorites: [],
   language: 'en',
   isLoading: false,
   isInitialized: false,
-  initError: null
+  initError: null,
+  isMobileMenuOpen: false
 };
 
 const AppContext = createContext<{
@@ -47,47 +49,30 @@ function appReducer(state: AppState, action: AppAction): AppState {
       return { ...state, user: action.payload };
     
     case 'LOGOUT':
-      return { ...state, user: null, currentMenu: null, cart: [] };
+      return { ...state, user: null, currentMenu: null, favorites: [] };
     
     case 'SET_MENU':
       return { ...state, currentMenu: action.payload };
     
-    case 'ADD_TO_CART': {
-      const existingItem = state.cart.find(item => item.id === action.payload.id);
+    case 'ADD_TO_FAVORITES': {
+      const existingItem = state.favorites.find(item => item.id === action.payload.id);
       if (existingItem) {
-        return {
-          ...state,
-          cart: state.cart.map(item =>
-            item.id === action.payload.id
-              ? { ...item, quantity: item.quantity + 1 }
-              : item
-          )
-        };
+        return state; // Already in favorites
       }
       return {
         ...state,
-        cart: [...state.cart, { id: action.payload.id, menuItem: action.payload, quantity: 1 }]
+        favorites: [...state.favorites, { id: action.payload.id, menuItem: action.payload }]
       };
     }
     
-    case 'REMOVE_FROM_CART':
+    case 'REMOVE_FROM_FAVORITES':
       return {
         ...state,
-        cart: state.cart.filter(item => item.id !== action.payload)
+        favorites: state.favorites.filter(item => item.id !== action.payload)
       };
     
-    case 'UPDATE_CART_QUANTITY':
-      return {
-        ...state,
-        cart: state.cart.map(item =>
-          item.id === action.payload.id
-            ? { ...item, quantity: action.payload.quantity }
-            : item
-        )
-      };
-    
-    case 'CLEAR_CART':
-      return { ...state, cart: [] };
+    case 'CLEAR_FAVORITES':
+      return { ...state, favorites: [] };
     
     case 'SET_LANGUAGE':
       return { ...state, language: action.payload };
@@ -100,6 +85,9 @@ function appReducer(state: AppState, action: AppAction): AppState {
 
     case 'SET_INIT_ERROR':
       return { ...state, initError: action.payload };
+    
+    case 'TOGGLE_MOBILE_MENU':
+      return { ...state, isMobileMenuOpen: !state.isMobileMenuOpen };
     
     case 'CYCLE_IMAGE':
       if (!state.currentMenu) return state;

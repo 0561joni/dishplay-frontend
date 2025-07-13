@@ -30,25 +30,36 @@ export function LanguageSelector() {
     <div className="relative">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-2 bg-white border border-gray-200 rounded-full px-4 py-2 hover:bg-gray-50 transition-colors shadow-sm"
+        className="w-full flex items-center justify-between gap-2 bg-white border border-gray-200 rounded-lg px-3 py-2 hover:bg-gray-50 transition-colors"
       >
-        <span className="text-lg">{languageFlags[state.language]}</span>
-        <ChevronDown className="w-4 h-4 text-gray-500" />
+        <div className="flex items-center gap-2">
+          <span className="text-lg">{languageFlags[state.language]}</span>
+          <span className="text-sm font-medium">{languageNames[state.language]}</span>
+        </div>
+        <ChevronDown className={`w-4 h-4 text-gray-500 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
       </button>
 
       {isOpen && (
-        <div className="absolute top-full right-0 mt-2 bg-white border border-gray-200 rounded-lg shadow-lg py-1 z-50 min-w-[150px]">
+        <>
+          <div 
+            className="fixed inset-0 z-40"
+            onClick={() => setIsOpen(false)}
+          />
+          <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg py-1 z-50">
           {Object.entries(languageNames).map(([code, name]) => (
             <button
               key={code}
               onClick={() => handleLanguageChange(code as Language)}
-              className="w-full flex items-center gap-3 px-4 py-2 hover:bg-gray-50 transition-colors text-left"
+              className={`w-full flex items-center gap-3 px-4 py-2 hover:bg-gray-50 transition-colors text-left ${
+                code === state.language ? 'bg-blue-50 text-blue-600' : ''
+              }`}
             >
               <span className="text-lg">{languageFlags[code as Language]}</span>
               <span className="text-sm font-medium">{name}</span>
             </button>
           ))}
-        </div>
+          </div>
+        </>
       )}
     </div>
   );

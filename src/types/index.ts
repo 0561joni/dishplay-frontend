@@ -24,10 +24,9 @@ export interface MenuItem {
   currentImageIndex: number;
 }
 
-export interface CartItem {
+export interface FavoriteItem {
   id: string;
   menuItem: MenuItem;
-  quantity: number;
 }
 
 export interface Menu {
