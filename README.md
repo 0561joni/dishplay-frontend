@@ -17,4 +17,7 @@ Run the development server:
 npm install
 npm run dev
 ```
-
+ToDo
+1 Change the basket to a favorites list with a heart icon.
+2 When clicking the heart icon on th etop right, access the favorites list.
+3 When the menu is finished processing, automatically open the menu.
