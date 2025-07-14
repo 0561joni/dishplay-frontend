@@ -57,6 +57,21 @@ export const AuthDebug: React.FC = () => {
       const token = await getAuthToken();
       console.log('Token being sent:', token);
       
+      // Decode token to inspect contents (base64 decode)
+      if (token) {
+        try {
+          const parts = token.split('.');
+          const payload = JSON.parse(atob(parts[1]));
+          console.log('Token payload:', payload);
+          console.log('Token issued at:', new Date(payload.iat * 1000));
+          console.log('Token expires at:', new Date(payload.exp * 1000));
+          console.log('Token audience:', payload.aud);
+          console.log('Token issuer:', payload.iss);
+        } catch (e) {
+          console.error('Failed to decode token:', e);
+        }
+      }
+      
       // Test API call to user profile
       const response = await fetch(`${import.meta.env.VITE_API_URL || 'https://dishplay-backend.onrender.com'}/api/user/profile`, {
         headers: {
@@ -70,12 +85,15 @@ export const AuthDebug: React.FC = () => {
       if (!response.ok) {
         const errorText = await response.text();
         console.error('API Error response:', errorText);
+        alert(`API Error (${response.status}): ${errorText}`);
       } else {
         const data = await response.json();
         console.log('API Success response:', data);
+        alert('API call successful! Check console for details.');
       }
     } catch (error) {
       console.error('Test API call failed:', error);
+      alert(`Test failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   };
 
@@ -134,6 +152,10 @@ export const AuthDebug: React.FC = () => {
       
       <div style={{ marginBottom: '8px' }}>
         <strong>6. API URL:</strong> {import.meta.env.VITE_API_URL || 'https://dishplay-backend.onrender.com'}
+      </div>
+      
+      <div style={{ marginBottom: '8px' }}>
+        <strong>7. Supabase URL:</strong> {import.meta.env.VITE_SUPABASE_URL || 'Not set'}
       </div>
       
       {authStatus.error && (
