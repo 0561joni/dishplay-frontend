@@ -130,7 +130,7 @@ export const api = {
 export const handleApiError = (error: unknown) => {
   console.error('API Error:', error);
   
-  if (error.status === 401) {
+  if (error instanceof Response && error.status === 401) {
     // Handle unauthorized - will be handled by Supabase auth
     return {
       success: false,
@@ -138,9 +138,16 @@ export const handleApiError = (error: unknown) => {
     };
   }
   
+  if (error instanceof Error) {
+    return {
+      success: false,
+      message: error.message,
+    };
+  }
+  
   return {
     success: false,
-    message: (error as { message?: string }).message || 'An unexpected error occurred',
+    message: 'An unexpected error occurred',
   };
 };
 
