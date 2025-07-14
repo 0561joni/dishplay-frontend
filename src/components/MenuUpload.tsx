@@ -29,14 +29,16 @@ export function MenuUpload() {
     setError('');
     
     try {
-      // Create menu record in Supabase
-      const menu = await createMenu(state.user.id);
-      
-      // Get auth token for API call
+      // Get auth token FIRST before any Supabase operations
+      console.log('[MenuUpload] Getting auth token before upload...');
       const token = await getAuthToken();
       if (!token) {
         throw new Error('Authentication token not available');
       }
+      console.log('[MenuUpload] Got auth token successfully');
+      
+      // NOW create menu record in Supabase
+      const menu = await createMenu(state.user.id);
 
       // Call backend API to process the menu
       const response = await api.menu.upload(file, token);
