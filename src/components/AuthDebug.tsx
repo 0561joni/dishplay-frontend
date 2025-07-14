@@ -172,6 +172,14 @@ export const AuthDebug: React.FC = () => {
         </div>
       )}
       
+      <div style={{ marginBottom: '8px' }}>
+        <strong>8. Memory Usage:</strong> {
+          (performance as any).memory 
+            ? `${Math.round((performance as any).memory.usedJSHeapSize / 1024 / 1024)}MB used`
+            : 'Not available'
+        }
+      </div>
+      
       <div style={{ marginTop: '12px', display: 'flex', gap: '8px' }}>
         <button 
           onClick={checkAuthStatus}
