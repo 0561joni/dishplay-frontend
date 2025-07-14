@@ -191,7 +191,24 @@ export const getAuthToken = async (): Promise<string | null> => {
       console.log('[Auth Debug] Is expired:', new Date() > new Date(session.expires_at! * 1000));
     }
     
-    return session?.access_token || null;
+    const token = session?.access_token || null;
+    
+    // Debug token format
+    if (token) {
+      console.log('[Auth Debug] Token length:', token.length);
+      console.log('[Auth Debug] Token parts:', token.split('.').length);
+      console.log('[Auth Debug] Token starts with:', token.substring(0, 30));
+      console.log('[Auth Debug] Token ends with:', token.substring(token.length - 30));
+      
+      // Validate JWT format (should have 3 parts separated by dots)
+      const parts = token.split('.');
+      if (parts.length !== 3) {
+        console.error('[Auth Debug] MALFORMED TOKEN - Expected 3 parts, got:', parts.length);
+        console.error('[Auth Debug] Token parts:', parts);
+      }
+    }
+    
+    return token;
   } catch (error) {
     console.error('[Auth Debug] Error in getAuthToken:', error);
     
