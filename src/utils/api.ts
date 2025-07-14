@@ -174,7 +174,14 @@ export const getAuthToken = async (): Promise<string | null> => {
     }
     
     console.log('[Auth Debug] Getting session...');
-    const { data: { session }, error } = await supabase.auth.getSession();
+    
+    // Add timeout to getSession call
+    const sessionPromise = supabase.auth.getSession();
+    const timeoutPromise = new Promise<never>((_, reject) => 
+      setTimeout(() => reject(new Error('getSession timeout')), 5000)
+    );
+    
+    const { data: { session }, error } = await Promise.race([sessionPromise, timeoutPromise]);
     console.log('[Auth Debug] Got session response');
     
     console.log('[Auth Debug] Session exists:', !!session);
@@ -187,6 +194,28 @@ export const getAuthToken = async (): Promise<string | null> => {
     return session?.access_token || null;
   } catch (error) {
     console.error('[Auth Debug] Error in getAuthToken:', error);
+    
+    // If getSession hangs, try to get user directly as fallback
+    if (error.message === 'getSession timeout') {
+      console.log('[Auth Debug] getSession timed out, trying getUser...');
+      try {
+        const { data: { user }, error: userError } = await Promise.race([
+          supabase.auth.getUser(),
+          new Promise<never>((_, reject) => 
+            setTimeout(() => reject(new Error('getUser timeout')), 3000)
+          )
+        ]);
+        
+        if (user && !userError) {
+          console.log('[Auth Debug] getUser succeeded, but no access token available');
+          // We have a user but can't get the session token reliably
+          return null;
+        }
+      } catch (userError) {
+        console.error('[Auth Debug] getUser also failed:', userError);
+      }
+    }
+    
     return null;
   }
 };

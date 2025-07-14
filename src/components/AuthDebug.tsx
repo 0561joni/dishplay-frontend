@@ -194,6 +194,38 @@ export const AuthDebug: React.FC = () => {
         >
           Test API Call
         </button>
+        
+        <button 
+          onClick={async () => {
+            if (!supabase) {
+              alert('Supabase not available');
+              return;
+            }
+            try {
+              console.log('Refreshing auth session...');
+              const { data, error } = await supabase.auth.refreshSession();
+              if (error) {
+                console.error('Refresh failed:', error);
+                alert(`Refresh failed: ${error.message}`);
+              } else {
+                console.log('Refresh successful');
+                alert('Auth session refreshed!');
+                checkAuthStatus(); // Update display
+              }
+            } catch (error) {
+              console.error('Refresh error:', error);
+              alert(`Refresh error: ${error instanceof Error ? error.message : 'Unknown'}`);
+            }
+          }}
+          style={{
+            padding: '4px 8px',
+            fontSize: '12px',
+            cursor: 'pointer',
+            backgroundColor: '#f0f0f0'
+          }}
+        >
+          Refresh Auth
+        </button>
       </div>
     </div>
   );
