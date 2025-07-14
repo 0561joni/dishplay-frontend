@@ -5,6 +5,7 @@ import { AuthForm } from './components/AuthForm';
 import { MenuUpload } from './components/MenuUpload';
 import { MenuDisplay } from './components/MenuDisplay';
 import { Favorites } from './components/Cart';
+import { AuthDebug } from './components/AuthDebug';
 
 function AppContent() {
   const { state } = useApp();
@@ -161,9 +162,25 @@ function AppContent() {
 }
 
 function App() {
+  const [showDebug, setShowDebug] = useState(true); // Show by default for testing
+  
+  // Toggle debug mode with Alt+D
+  useEffect(() => {
+    const handleKeyPress = (e: KeyboardEvent) => {
+      if (e.altKey && e.key === 'd') {
+        e.preventDefault();
+        setShowDebug(prev => !prev);
+      }
+    };
+    
+    window.addEventListener('keydown', handleKeyPress);
+    return () => window.removeEventListener('keydown', handleKeyPress);
+  }, []);
+  
   return (
     <AppProvider>
       <AppContent />
+      {showDebug && <AuthDebug />}
     </AppProvider>
   );
 }

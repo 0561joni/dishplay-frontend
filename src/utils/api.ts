@@ -4,6 +4,11 @@ export const api = {
   // Menu processing endpoints
   menu: {
     upload: async (file: File, token: string) => {
+      console.log('[API Debug] Upload called with:');
+      console.log('- Token:', token ? `${token.substring(0, 20)}...` : 'NO TOKEN');
+      console.log('- API URL:', API_BASE_URL);
+      console.log('- Full URL:', `${API_BASE_URL}/api/menu/upload`);
+      
       const formData = new FormData();
       formData.append('menu', file);
       
@@ -15,7 +20,12 @@ export const api = {
         body: formData,
       });
       
+      console.log('[API Debug] Response status:', response.status);
+      console.log('[API Debug] Response headers:', response.headers);
+      
       if (!response.ok) {
+        const errorText = await response.text();
+        console.error('[API Debug] Error response:', errorText);
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       
@@ -153,12 +163,21 @@ export const handleApiError = (error: unknown) => {
 
 // Helper function to get auth token from Supabase
 export const getAuthToken = async (): Promise<string | null> => {
+  console.log('[Auth Debug] Getting auth token...');
   const { supabase } = await import('../lib/supabase');
   if (!supabase) {
-    console.error('Supabase client not initialized');
+    console.error('[Auth Debug] Supabase client not initialized');
     return null;
   }
-  const { data: { session } } = await supabase.auth.getSession();
+  const { data: { session }, error } = await supabase.auth.getSession();
+  
+  console.log('[Auth Debug] Session exists:', !!session);
+  console.log('[Auth Debug] Session error:', error);
+  if (session) {
+    console.log('[Auth Debug] Token expiry:', new Date(session.expires_at! * 1000));
+    console.log('[Auth Debug] Is expired:', new Date() > new Date(session.expires_at! * 1000));
+  }
+  
   return session?.access_token || null;
 };
 
