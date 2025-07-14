@@ -36,6 +36,23 @@ export function MenuUpload() {
         throw new Error('Authentication token not available');
       }
       console.log('[MenuUpload] Got auth token successfully');
+      console.log('[MenuUpload] Token details:', {
+        length: token.length,
+        parts: token.split('.').length,
+        firstChars: token.substring(0, 50),
+        lastChars: token.substring(token.length - 50)
+      });
+      
+      // Validate token format before proceeding
+      const tokenParts = token.split('.');
+      if (tokenParts.length !== 3) {
+        console.error('[MenuUpload] CRITICAL: Token is malformed!', {
+          expectedParts: 3,
+          actualParts: tokenParts.length,
+          token: token
+        });
+        throw new Error(`Token is malformed: ${tokenParts.length} parts instead of 3`);
+      }
       
       // NOW create menu record in Supabase
       const menu = await createMenu(state.user.id);
