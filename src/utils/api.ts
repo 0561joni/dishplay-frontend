@@ -1,3 +1,5 @@
+import { supabase } from '../lib/supabase';
+
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://dishplay-backend.onrender.com';
 
 export const api = {
@@ -165,9 +167,6 @@ export const handleApiError = (error: unknown) => {
 export const getAuthToken = async (): Promise<string | null> => {
   try {
     console.log('[Auth Debug] Getting auth token...');
-    console.log('[Auth Debug] Starting import...');
-    const { supabase } = await import('../lib/supabase');
-    console.log('[Auth Debug] Import completed, supabase:', !!supabase);
     
     if (!supabase) {
       console.error('[Auth Debug] Supabase client not initialized');
