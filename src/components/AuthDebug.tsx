@@ -54,7 +54,15 @@ export const AuthDebug: React.FC = () => {
 
   const testAPICall = async () => {
     try {
-      const token = await getAuthToken();
+      console.log('Starting test API call...');
+      
+      // Add timeout to getAuthToken
+      const tokenPromise = getAuthToken();
+      const timeoutPromise = new Promise<null>((_, reject) => 
+        setTimeout(() => reject(new Error('getAuthToken timeout after 10s')), 10000)
+      );
+      
+      const token = await Promise.race([tokenPromise, timeoutPromise]);
       console.log('Token being sent:', token);
       
       // Decode token to inspect contents (base64 decode)

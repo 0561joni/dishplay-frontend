@@ -163,22 +163,33 @@ export const handleApiError = (error: unknown) => {
 
 // Helper function to get auth token from Supabase
 export const getAuthToken = async (): Promise<string | null> => {
-  console.log('[Auth Debug] Getting auth token...');
-  const { supabase } = await import('../lib/supabase');
-  if (!supabase) {
-    console.error('[Auth Debug] Supabase client not initialized');
+  try {
+    console.log('[Auth Debug] Getting auth token...');
+    console.log('[Auth Debug] Starting import...');
+    const { supabase } = await import('../lib/supabase');
+    console.log('[Auth Debug] Import completed, supabase:', !!supabase);
+    
+    if (!supabase) {
+      console.error('[Auth Debug] Supabase client not initialized');
+      return null;
+    }
+    
+    console.log('[Auth Debug] Getting session...');
+    const { data: { session }, error } = await supabase.auth.getSession();
+    console.log('[Auth Debug] Got session response');
+    
+    console.log('[Auth Debug] Session exists:', !!session);
+    console.log('[Auth Debug] Session error:', error);
+    if (session) {
+      console.log('[Auth Debug] Token expiry:', new Date(session.expires_at! * 1000));
+      console.log('[Auth Debug] Is expired:', new Date() > new Date(session.expires_at! * 1000));
+    }
+    
+    return session?.access_token || null;
+  } catch (error) {
+    console.error('[Auth Debug] Error in getAuthToken:', error);
     return null;
   }
-  const { data: { session }, error } = await supabase.auth.getSession();
-  
-  console.log('[Auth Debug] Session exists:', !!session);
-  console.log('[Auth Debug] Session error:', error);
-  if (session) {
-    console.log('[Auth Debug] Token expiry:', new Date(session.expires_at! * 1000));
-    console.log('[Auth Debug] Is expired:', new Date() > new Date(session.expires_at! * 1000));
-  }
-  
-  return session?.access_token || null;
 };
 
 // These functions are kept for compatibility but will use Supabase auth
