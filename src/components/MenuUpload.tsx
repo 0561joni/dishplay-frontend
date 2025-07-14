@@ -3,7 +3,7 @@ import { Upload } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { translate } from '../utils/translations';
 import { api, getAuthToken, handleApiError } from '../utils/api';
-import { createMenu, updateMenuStatus, createMenuItems, createItemImages } from '../lib/supabase';
+import { createMenu, updateMenuStatus, createMenuItems, createItemImages, supabase } from '../lib/supabase';
 
 export function MenuUpload() {
   const { state, dispatch } = useApp();
@@ -112,6 +112,31 @@ export function MenuUpload() {
         };
 
         dispatch({ type: 'SET_MENU', payload: transformedMenu });
+        
+        console.log('[MenuUpload] Upload completed successfully');
+        
+        // Force refresh auth session after upload to prevent token corruption
+        try {
+          console.log('[MenuUpload] Refreshing auth session after upload...');
+          if (supabase) {
+            const { data, error } = await supabase.auth.refreshSession();
+            if (error) {
+              console.error('[MenuUpload] Failed to refresh session:', error);
+            } else {
+              console.log('[MenuUpload] Session refreshed successfully');
+            }
+          }
+          
+          // Verify auth state after refresh
+          const postUploadToken = await getAuthToken();
+          console.log('[MenuUpload] Post-upload token check:', {
+            hasToken: !!postUploadToken,
+            length: postUploadToken?.length,
+            parts: postUploadToken?.split('.').length
+          });
+        } catch (e) {
+          console.error('[MenuUpload] Post-upload auth operations failed:', e);
+        }
         
         // Auto-navigate to menu view after successful processing
         setTimeout(() => {
