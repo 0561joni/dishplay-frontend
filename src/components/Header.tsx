@@ -36,7 +36,7 @@ export function Header() {
             {state.user && (
               <button 
                 className="relative p-2 hover:bg-gray-100 rounded-lg transition-colors"
-                onClick={() => {/* Will be handled in App.tsx */}}
+                onClick={() => window.dispatchEvent(new CustomEvent('favoritesClick'))}
               >
                 <Heart className="w-5 h-5 sm:w-6 sm:h-6 text-gray-600" />
                 {favoritesCount > 0 && (

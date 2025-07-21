@@ -27,12 +27,8 @@ function AppContent() {
       setCurrentView('favorites');
     };
 
-    // Add click handler to favorites button in header
-    const favoritesButton = document.querySelector('[data-favorites-button]');
-    if (favoritesButton) {
-      favoritesButton.addEventListener('click', handleFavoritesClick);
-      return () => favoritesButton.removeEventListener('click', handleFavoritesClick);
-    }
+    window.addEventListener('favoritesClick', handleFavoritesClick);
+    return () => window.removeEventListener('favoritesClick', handleFavoritesClick);
   }, [state.user]);
 
   if (state.initError) {
@@ -79,18 +75,6 @@ function AppContent() {
     <div className="min-h-screen bg-gray-50">
       <Header />
 
-      {/* Update header favorites button to handle clicks */}
-      <script
-        dangerouslySetInnerHTML={{
-          __html: `
-            document.addEventListener('DOMContentLoaded', function() {
-              const favButton = document.querySelector('header button[class*="relative"]');
-              if (favButton) favButton.setAttribute('data-favorites-button', 'true');
-            });
-          `
-        }}
-      />
-
       {/* Main Content */}
       <main className="py-4 sm:py-8 relative pb-20 sm:pb-8">
         {/* Floating Navigation */}
@@ -101,7 +85,7 @@ function AppContent() {
                 onClick={() => {
                   setCurrentView('upload');
                   if (state.isMobileMenuOpen) {
-                    dispatch({ type: 'TOGGLE_MOBILE_MENU' });
+                    // dispatch({ type: 'TOGGLE_MOBILE_MENU' });
                   }
                 }}
                 className={`px-3 sm:px-4 py-2 rounded-full font-medium text-xs sm:text-sm transition-all duration-200 touch-manipulation ${
@@ -117,7 +101,7 @@ function AppContent() {
                   onClick={() => {
                     setCurrentView('menu');
                     if (state.isMobileMenuOpen) {
-                      dispatch({ type: 'TOGGLE_MOBILE_MENU' });
+                      // dispatch({ type: 'TOGGLE_MOBILE_MENU' });
                     }
                   }}
                   className={`px-3 sm:px-4 py-2 rounded-full font-medium text-xs sm:text-sm transition-all duration-200 touch-manipulation ${
@@ -134,7 +118,7 @@ function AppContent() {
                   onClick={() => {
                     setCurrentView('favorites');
                     if (state.isMobileMenuOpen) {
-                      dispatch({ type: 'TOGGLE_MOBILE_MENU' });
+                      // dispatch({ type: 'TOGGLE_MOBILE_MENU' });
                     }
                   }}
                   className={`px-3 sm:px-4 py-2 rounded-full font-medium text-xs sm:text-sm transition-all duration-200 relative touch-manipulation ${

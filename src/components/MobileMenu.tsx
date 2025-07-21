@@ -87,31 +87,6 @@ export function MobileMenu({ isOpen, onClose }: MobileMenuProps) {
             {/* Plan Section */}
             <div className="p-4 border-b border-gray-100">
               <div className="flex items-center gap-3 mb-3">
-                <div className="bg-purple-100 p-2 rounded-full">
-                  <PlanIcon className="w-5 h-5 text-purple-600" />
-                </div>
-                <div>
-                  <h3 className="font-medium text-gray-900">Plan</h3>
-                  <p className="text-sm text-gray-500">Current subscription</p>
-                </div>
-              </div>
-              
-              <div className="bg-gray-50 rounded-lg p-3">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="font-medium text-gray-900 capitalize">{currentPlan} Plan</span>
-                  <PlanIcon className={`w-4 h-4 ${
-                    currentPlan === 'light' ? 'text-yellow-500' :
-                    currentPlan === 'normal' ? 'text-blue-500' :
-                    'text-purple-500'
-                  }`} />
-                </div>
-                <PlanSelector />
-              </div>
-            </div>
-
-            {/* Settings Section */}
-            <div className="p-4 border-b border-gray-100">
-              <div className="flex items-center gap-3 mb-3">
                 <div className="bg-gray-100 p-2 rounded-full">
                   <Settings className="w-5 h-5 text-gray-600" />
                 </div>
@@ -127,6 +102,23 @@ export function MobileMenu({ isOpen, onClose }: MobileMenuProps) {
                     Language
                   </label>
                   <LanguageSelector />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Current Plan
+                  </label>
+                  <div className="bg-gray-50 rounded-lg p-3">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="font-medium text-gray-900 capitalize">{currentPlan} Plan</span>
+                      <PlanIcon className={`w-4 h-4 ${
+                        currentPlan === 'light' ? 'text-yellow-500' :
+                        currentPlan === 'normal' ? 'text-blue-500' :
+                        'text-purple-500'
+                      }`} />
+                    </div>
+                    <PlanSelector />
+                  </div>
                 </div>
               </div>
             </div>
