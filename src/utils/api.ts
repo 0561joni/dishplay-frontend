@@ -190,66 +190,75 @@ export const getAuthToken = async (): Promise<string | null> => {
       return null;
     }
     
-    console.log('[Auth Debug] Getting session...');
-    
-    // Add timeout to getSession call
-    const sessionPromise = supabase.auth.getSession();
-    const timeoutPromise = new Promise<never>((_, reject) => 
-      setTimeout(() => reject(new Error('getSession timeout')), 5000)
-    );
-    
-    const { data: { session }, error } = await Promise.race([sessionPromise, timeoutPromise]);
-    console.log('[Auth Debug] Got session response');
-    
-    console.log('[Auth Debug] Session exists:', !!session);
-    console.log('[Auth Debug] Session error:', error);
-    if (session) {
-      console.log('[Auth Debug] Token expiry:', new Date(session.expires_at! * 1000));
-      console.log('[Auth Debug] Is expired:', new Date() > new Date(session.expires_at! * 1000));
-    }
-    
-    const token = session?.access_token || null;
-    
-    // Debug token format
-    if (token) {
-      console.log('[Auth Debug] Token length:', token.length);
-      console.log('[Auth Debug] Token parts:', token.split('.').length);
-      console.log('[Auth Debug] Token starts with:', token.substring(0, 30));
-      console.log('[Auth Debug] Token ends with:', token.substring(token.length - 30));
+    // First, try the correct localStorage key for Supabase
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+    if (supabaseUrl) {
+      const projectRef = supabaseUrl.split('//')[1]?.split('.')[0];
+      const localStorageKey = `sb-${projectRef}-auth-token`;
       
-      // Validate JWT format (should have 3 parts separated by dots)
-      const parts = token.split('.');
-      if (parts.length !== 3) {
-        console.error('[Auth Debug] MALFORMED TOKEN - Expected 3 parts, got:', parts.length);
-        console.error('[Auth Debug] Token parts:', parts);
-      }
-    }
-    
-    return token;
-  } catch (error) {
-    console.error('[Auth Debug] Error in getAuthToken:', error);
-    
-    // If getSession hangs, try to get user directly as fallback
-    if (error.message === 'getSession timeout') {
-      console.log('[Auth Debug] getSession timed out, trying getUser...');
       try {
-        const { data: { user }, error: userError } = await Promise.race([
-          supabase.auth.getUser(),
-          new Promise<never>((_, reject) => 
-            setTimeout(() => reject(new Error('getUser timeout')), 3000)
-          )
-        ]);
-        
-        if (user && !userError) {
-          console.log('[Auth Debug] getUser succeeded, but no access token available');
-          // We have a user but can't get the session token reliably
-          return null;
+        const storedSession = localStorage.getItem(localStorageKey);
+        if (storedSession) {
+          const parsed = JSON.parse(storedSession);
+          const token = parsed?.access_token;
+          const expiresAt = parsed?.expires_at;
+          
+          if (token && expiresAt) {
+            const isExpired = new Date() > new Date(expiresAt * 1000);
+            if (!isExpired) {
+              console.log('[Auth Debug] Using valid token from localStorage');
+              return token;
+            } else {
+              console.log('[Auth Debug] Token in localStorage is expired');
+            }
+          }
         }
-      } catch (userError) {
-        console.error('[Auth Debug] getUser also failed:', userError);
+      } catch (e) {
+        console.error('[Auth Debug] Failed to parse localStorage session:', e);
       }
     }
     
+    // Try getSession with timeout
+    console.log('[Auth Debug] Attempting getSession...');
+    try {
+      const sessionPromise = supabase.auth.getSession();
+      const timeoutPromise = new Promise<never>((_, reject) => 
+        setTimeout(() => reject(new Error('getSession timeout')), 2000)
+      );
+      
+      const { data: { session }, error } = await Promise.race([sessionPromise, timeoutPromise]);
+      
+      if (error) {
+        console.error('[Auth Debug] Session error:', error);
+        return null;
+      }
+      
+      if (session?.access_token) {
+        console.log('[Auth Debug] Got token from getSession');
+        return session.access_token;
+      }
+      
+    } catch (sessionError) {
+      console.error('[Auth Debug] getSession failed or timed out:', sessionError);
+      
+      // Try refreshing the session as fallback
+      console.log('[Auth Debug] Attempting to refresh session...');
+      try {
+        const { data: { session: refreshedSession }, error: refreshError } = await supabase.auth.refreshSession();
+        if (refreshedSession?.access_token && !refreshError) {
+          console.log('[Auth Debug] Session refreshed successfully');
+          return refreshedSession.access_token;
+        }
+      } catch (refreshError) {
+        console.error('[Auth Debug] Session refresh failed:', refreshError);
+      }
+    }
+    
+    console.log('[Auth Debug] All token retrieval methods failed');
+    return null;
+    
+  } catch (error) {
+    console.error('[Auth Debug] Unexpected error in getAuthToken:', error);
     return null;
   }
 };
