@@ -162,7 +162,7 @@ function AppContent() {
 }
 
 function App() {
-  const [showDebug, setShowDebug] = useState(true); // Show by default for testing
+  const [showDebug, setShowDebug] = useState(false); // Disabled by default to prevent unauthorized API calls
   
   // Toggle debug mode with Alt+D
   useEffect(() => {

@@ -2,6 +2,14 @@ import { supabase } from '../lib/supabase';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://dishplay-backend.onrender.com';
 
+// Helper function to validate token
+const validateToken = (token: string | null): string => {
+  if (!token || token === 'null' || token === 'undefined' || token.trim() === '') {
+    throw new Error('Authentication required. Please log in.');
+  }
+  return token;
+};
+
 export const api = {
   // Menu processing endpoints
   menu: {
@@ -11,13 +19,16 @@ export const api = {
       console.log('- API URL:', API_BASE_URL);
       console.log('- Full URL:', `${API_BASE_URL}/api/menu/upload`);
       
+      // Validate token
+      const validToken = validateToken(token);
+      
       const formData = new FormData();
       formData.append('menu', file);
       
       const response = await fetch(`${API_BASE_URL}/api/menu/upload`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${token}`,
+          'Authorization': `Bearer ${validToken}`,
         },
         body: formData,
       });
@@ -35,9 +46,10 @@ export const api = {
     },
     
     getMenu: async (menuId: string, token: string) => {
+      const validToken = validateToken(token);
       const response = await fetch(`${API_BASE_URL}/api/menu/${menuId}`, {
         headers: {
-          'Authorization': `Bearer ${token}`,
+          'Authorization': `Bearer ${validToken}`,
         },
       });
       
@@ -49,9 +61,10 @@ export const api = {
     },
     
     getUserMenus: async (token: string) => {
+      const validToken = validateToken(token);
       const response = await fetch(`${API_BASE_URL}/api/menu/user`, {
         headers: {
-          'Authorization': `Bearer ${token}`,
+          'Authorization': `Bearer ${validToken}`,
         },
       });
       
@@ -66,11 +79,12 @@ export const api = {
   // Translation endpoints
   translate: {
     menuItem: async (itemId: string, language: string, token: string) => {
+      const validToken = validateToken(token);
       const response = await fetch(`${API_BASE_URL}/api/translate/menu-item`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
+          'Authorization': `Bearer ${validToken}`,
         },
         body: JSON.stringify({ itemId, language }),
       });
@@ -86,11 +100,12 @@ export const api = {
   // Image search endpoints
   images: {
     searchForMenuItem: async (itemName: string, description: string, token: string) => {
+      const validToken = validateToken(token);
       const response = await fetch(`${API_BASE_URL}/api/images/search`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
+          'Authorization': `Bearer ${validToken}`,
         },
         body: JSON.stringify({ itemName, description }),
       });
@@ -106,9 +121,10 @@ export const api = {
   // User endpoints
   user: {
     getProfile: async (token: string) => {
+      const validToken = validateToken(token);
       const response = await fetch(`${API_BASE_URL}/api/user/profile`, {
         headers: {
-          'Authorization': `Bearer ${token}`,
+          'Authorization': `Bearer ${validToken}`,
         },
       });
       
@@ -120,11 +136,12 @@ export const api = {
     },
     
     updateCredits: async (credits: number, token: string) => {
+      const validToken = validateToken(token);
       const response = await fetch(`${API_BASE_URL}/api/user/credits`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
+          'Authorization': `Bearer ${validToken}`,
         },
         body: JSON.stringify({ credits }),
       });

@@ -65,6 +65,12 @@ export const AuthDebug: React.FC = () => {
       const token = await Promise.race([tokenPromise, timeoutPromise]);
       console.log('Token being sent:', token);
       
+      if (!token) {
+        console.error('No token available - user may not be authenticated');
+        alert('No authentication token available. Please log in first.');
+        return;
+      }
+      
       // Decode token to inspect contents (base64 decode)
       if (token) {
         try {
