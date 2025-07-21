@@ -10,6 +10,20 @@ const validateToken = (token: string | null): string => {
   return token;
 };
 
+// Cache for the current valid token to avoid repeated getSession calls
+let cachedToken: string | null = null;
+let cacheExpiry: number | null = null;
+
+const clearTokenCache = () => {
+  cachedToken = null;
+  cacheExpiry = null;
+};
+
+const setCachedToken = (token: string, expiresAt: number) => {
+  cachedToken = token;
+  cacheExpiry = expiresAt * 1000; // Convert to milliseconds
+};
+
 export const api = {
   // Menu processing endpoints
   menu: {
@@ -190,31 +204,64 @@ export const getAuthToken = async (): Promise<string | null> => {
       return null;
     }
     
-    // First, try the correct localStorage key for Supabase
+    // Check cached token first
+    if (cachedToken && cacheExpiry && new Date().getTime() < cacheExpiry - 60000) { // 1 minute buffer
+      console.log('[Auth Debug] Using cached token');
+      return cachedToken;
+    } else if (cachedToken) {
+      console.log('[Auth Debug] Cached token expired, clearing cache');
+      clearTokenCache();
+    }
+    
+    // Try multiple possible localStorage keys that Supabase might use
     const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
     if (supabaseUrl) {
       const projectRef = supabaseUrl.split('//')[1]?.split('.')[0];
-      const localStorageKey = `sb-${projectRef}-auth-token`;
+      const possibleKeys = [
+        `sb-${projectRef}-auth-token`,
+        `supabase.auth.token`,
+        `sb-${projectRef}-session`,
+        `supabase-auth-${projectRef}`
+      ];
       
-      try {
-        const storedSession = localStorage.getItem(localStorageKey);
-        if (storedSession) {
-          const parsed = JSON.parse(storedSession);
-          const token = parsed?.access_token;
-          const expiresAt = parsed?.expires_at;
-          
-          if (token && expiresAt) {
-            const isExpired = new Date() > new Date(expiresAt * 1000);
-            if (!isExpired) {
-              console.log('[Auth Debug] Using valid token from localStorage');
-              return token;
-            } else {
-              console.log('[Auth Debug] Token in localStorage is expired');
+      console.log('[Auth Debug] Checking localStorage keys:', possibleKeys);
+      
+      for (const key of possibleKeys) {
+        try {
+          const storedData = localStorage.getItem(key);
+          if (storedData) {
+            console.log('[Auth Debug] Found data in key:', key);
+            const parsed = JSON.parse(storedData);
+            
+            // Check different possible data structures
+            let token = null;
+            let expiresAt = null;
+            
+            if (parsed?.access_token) {
+              token = parsed.access_token;
+              expiresAt = parsed.expires_at;
+            } else if (parsed?.session?.access_token) {
+              token = parsed.session.access_token;
+              expiresAt = parsed.session.expires_at;
+            } else if (parsed?.currentSession?.access_token) {
+              token = parsed.currentSession.access_token;
+              expiresAt = parsed.currentSession.expires_at;
+            }
+            
+            if (token && expiresAt) {
+              const isExpired = new Date() > new Date(expiresAt * 1000);
+              if (!isExpired) {
+                console.log('[Auth Debug] Using valid token from localStorage key:', key);
+                setCachedToken(token, expiresAt);
+                return token;
+              } else {
+                console.log('[Auth Debug] Token in localStorage is expired');
+              }
             }
           }
+        } catch (e) {
+          console.error(`[Auth Debug] Failed to parse localStorage key ${key}:`, e);
         }
-      } catch (e) {
-        console.error('[Auth Debug] Failed to parse localStorage session:', e);
       }
     }
     
@@ -235,6 +282,9 @@ export const getAuthToken = async (): Promise<string | null> => {
       
       if (session?.access_token) {
         console.log('[Auth Debug] Got token from getSession');
+        if (session.expires_at) {
+          setCachedToken(session.access_token, session.expires_at);
+        }
         return session.access_token;
       }
       
@@ -247,6 +297,9 @@ export const getAuthToken = async (): Promise<string | null> => {
         const { data: { session: refreshedSession }, error: refreshError } = await supabase.auth.refreshSession();
         if (refreshedSession?.access_token && !refreshError) {
           console.log('[Auth Debug] Session refreshed successfully');
+          if (refreshedSession.expires_at) {
+            setCachedToken(refreshedSession.access_token, refreshedSession.expires_at);
+          }
           return refreshedSession.access_token;
         }
       } catch (refreshError) {
@@ -271,4 +324,9 @@ export const setAuthToken = (): void => {
 
 export const removeAuthToken = (): void => {
   // Supabase handles token removal automatically
-  console.log('Token removal handled by Supabase');};
+  clearTokenCache();
+  console.log('Token removal handled by Supabase');
+};
+
+// Export for external use
+export { clearTokenCache };
