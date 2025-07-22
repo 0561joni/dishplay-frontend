@@ -9,11 +9,16 @@ export function MenuDisplay() {
   const [translatedItems, setTranslatedItems] = useState<MenuItem[]>([]);
   const [isTranslating, setIsTranslating] = useState(false);
 
+  // Create stable references for menu content (excluding image indices)
+  const menuId = state.currentMenu?.id;
+  const itemNames = state.currentMenu?.items.map(item => item.item_name || item.name).join(',');
+  
   useEffect(() => {
     console.log('👀 Language/Menu change detected:', {
       language: state.language,
       hasMenu: !!state.currentMenu,
-      itemCount: state.currentMenu?.items.length || 0
+      itemCount: state.currentMenu?.items.length || 0,
+      menuId: menuId
     });
     
     if (state.currentMenu && state.language !== 'en') {
@@ -22,7 +27,7 @@ export function MenuDisplay() {
       console.log('📄 Using original items (English or no translation needed)');
       setTranslatedItems(state.currentMenu.items);
     }
-  }, [state.currentMenu, state.language]);
+  }, [menuId, itemNames, state.language]); // Only depend on actual content, not image indices
 
   const translateMenuItems = async () => {
     if (!state.currentMenu) return;
@@ -90,7 +95,17 @@ export function MenuDisplay() {
     return null;
   }
 
-  const displayItems = translatedItems.length > 0 ? translatedItems : state.currentMenu.items;
+  // Merge translated content with current image indices from live state
+  const displayItems = translatedItems.length > 0 
+    ? translatedItems.map((translatedItem, index) => {
+        const liveItem = state.currentMenu?.items[index];
+        return {
+          ...translatedItem,
+          currentImageIndex: liveItem?.currentImageIndex || 0, // Use current image index from live state
+          images: liveItem?.images || translatedItem.images || [] // Ensure images are preserved
+        };
+      })
+    : state.currentMenu?.items || [];
 
   return (
     <div className="max-w-6xl mx-auto p-4 sm:p-6">
