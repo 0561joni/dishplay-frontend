@@ -6,6 +6,7 @@ import { MenuUpload } from './components/MenuUpload';
 import { MenuDisplay } from './components/MenuDisplay';
 import { Favorites } from './components/Cart';
 import { AuthDebug } from './components/AuthDebug';
+import { TranslationDebug } from './components/TranslationDebug';
 
 function AppContent() {
   const { state } = useApp();
@@ -164,6 +165,7 @@ function App() {
   return (
     <AppProvider>
       <AppContent />
+      <TranslationDebug />
       {showDebug && <AuthDebug />}
     </AppProvider>
   );

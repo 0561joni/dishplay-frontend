@@ -10,15 +10,25 @@ export function MenuDisplay() {
   const [isTranslating, setIsTranslating] = useState(false);
 
   useEffect(() => {
+    console.log('👀 Language/Menu change detected:', {
+      language: state.language,
+      hasMenu: !!state.currentMenu,
+      itemCount: state.currentMenu?.items.length || 0
+    });
+    
     if (state.currentMenu && state.language !== 'en') {
       translateMenuItems();
     } else if (state.currentMenu) {
+      console.log('📄 Using original items (English or no translation needed)');
       setTranslatedItems(state.currentMenu.items);
     }
   }, [state.currentMenu, state.language]);
 
   const translateMenuItems = async () => {
     if (!state.currentMenu) return;
+    
+    console.log('🌍 Starting translation to:', state.language);
+    console.log('📋 Original items:', state.currentMenu.items);
     
     setIsTranslating(true);
     try {
@@ -29,15 +39,43 @@ export function MenuDisplay() {
         return;
       }
 
+      // Prepare items for translation - ensure they have the correct structure
+      const itemsToTranslate = state.currentMenu.items.map(item => ({
+        id: item.id,
+        name: item.item_name || item.name || '',
+        description: item.description,
+        price: item.price,
+        currency: item.currency,
+        images: item.images || [],
+        currentImageIndex: item.currentImageIndex || 0
+      }));
+
+      console.log('📤 Sending for translation:', itemsToTranslate);
+
       const response = await api.translate.translateMenu(
-        state.currentMenu.items,
+        itemsToTranslate,
         state.language,
         token
       );
 
-      if (response.success) {
-        setTranslatedItems(response.items);
+      console.log('📥 Translation response:', response);
+
+      if (response.success && response.items) {
+        // Map translated items back to the correct structure
+        const mappedItems = response.items.map((translatedItem, index) => {
+          const originalItem = state.currentMenu!.items[index];
+          return {
+            ...originalItem,
+            name: translatedItem.name,
+            item_name: translatedItem.name, // Ensure both fields are set
+            description: translatedItem.description
+          };
+        });
+        
+        console.log('✨ Final translated items:', mappedItems);
+        setTranslatedItems(mappedItems);
       } else {
+        console.warn('Translation failed or no items returned, using originals');
         setTranslatedItems(state.currentMenu.items);
       }
     } catch (error) {

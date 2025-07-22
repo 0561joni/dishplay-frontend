@@ -7,6 +7,14 @@ interface MenuItemCardProps {
   item: MenuItem;
 }
 
+function getItemName(item: MenuItem): string {
+  return item.name || item.item_name || '';
+}
+
+function getItemDescription(item: MenuItem): string | null {
+  return item.description;
+}
+
 export function MenuItemCard({ item }: MenuItemCardProps) {
   const { state, dispatch } = useApp();
 
@@ -28,14 +36,24 @@ export function MenuItemCard({ item }: MenuItemCardProps) {
     <div className="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-lg transition-shadow touch-manipulation">
       {/* Image Section */}
       <div className="relative h-40 sm:h-48 bg-gray-100">
-        <img
-          src={item.images[item.currentImageIndex || 0]}
-          alt={item.item_name || item.name}
-          className="w-full h-full object-cover"
-        />
+        {item.images && item.images.length > 0 ? (
+          <img
+            src={item.images[item.currentImageIndex || 0]}
+            alt={getItemName(item)}
+            className="w-full h-full object-cover"
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center text-gray-400">
+            <div className="text-center">
+              <div className="text-4xl mb-2">🍽️</div>
+              <div className="text-sm">No image available</div>
+            </div>
+          </div>
+        )}
         
         {/* Image Navigation */}
-        <div className="absolute inset-0 flex items-center justify-between p-2 opacity-0 hover:opacity-100 sm:opacity-100 transition-opacity">
+        {item.images && item.images.length > 1 && (
+          <div className="absolute inset-0 flex items-center justify-between p-2 opacity-0 hover:opacity-100 sm:opacity-100 transition-opacity">
           <button
             onClick={() => handleImageCycle('prev')}
             className="bg-black bg-opacity-50 text-white p-1.5 sm:p-2 rounded-full hover:bg-opacity-70 transition-colors touch-manipulation"
@@ -48,28 +66,31 @@ export function MenuItemCard({ item }: MenuItemCardProps) {
           >
             <ChevronRight className="w-3 h-3 sm:w-4 sm:h-4" />
           </button>
-        </div>
+          </div>
+        )}
 
         {/* Image Indicators */}
-        <div className="absolute bottom-1 sm:bottom-2 left-1/2 transform -translate-x-1/2 flex gap-1">
-          {item.images.map((_, index) => (
+        {item.images && item.images.length > 1 && (
+          <div className="absolute bottom-1 sm:bottom-2 left-1/2 transform -translate-x-1/2 flex gap-1">
+            {item.images.map((_, index) => (
             <div
               key={index}
               className={`w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full transition-colors ${
                 index === (item.currentImageIndex || 0) ? 'bg-white' : 'bg-white bg-opacity-50'
               }`}
             />
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Content Section */}
       <div className="p-3 sm:p-4">
         <h3 className="font-semibold text-gray-900 mb-2 text-sm sm:text-base line-clamp-1">
-          {item.item_name || item.name}
+          {getItemName(item)}
         </h3>
         <p className="text-xs sm:text-sm text-gray-600 mb-3 line-clamp-2">
-          {item.description}
+          {getItemDescription(item)}
         </p>
         
         <div className="flex items-center justify-between">
