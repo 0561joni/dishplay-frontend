@@ -29,8 +29,8 @@ export function MenuItemCard({ item }: MenuItemCardProps) {
       {/* Image Section */}
       <div className="relative h-40 sm:h-48 bg-gray-100">
         <img
-          src={item.images[item.currentImageIndex]}
-          alt={item.item_name}
+          src={item.images[item.currentImageIndex || 0]}
+          alt={item.item_name || item.name}
           className="w-full h-full object-cover"
         />
         
@@ -56,7 +56,7 @@ export function MenuItemCard({ item }: MenuItemCardProps) {
             <div
               key={index}
               className={`w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full transition-colors ${
-                index === item.currentImageIndex ? 'bg-white' : 'bg-white bg-opacity-50'
+                index === (item.currentImageIndex || 0) ? 'bg-white' : 'bg-white bg-opacity-50'
               }`}
             />
           ))}
@@ -66,7 +66,7 @@ export function MenuItemCard({ item }: MenuItemCardProps) {
       {/* Content Section */}
       <div className="p-3 sm:p-4">
         <h3 className="font-semibold text-gray-900 mb-2 text-sm sm:text-base line-clamp-1">
-          {item.item_name}
+          {item.item_name || item.name}
         </h3>
         <p className="text-xs sm:text-sm text-gray-600 mb-3 line-clamp-2">
           {item.description}

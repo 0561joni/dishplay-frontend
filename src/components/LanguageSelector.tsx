@@ -7,14 +7,30 @@ const languageFlags: Record<Language, string> = {
   en: '🇺🇸',
   fr: '🇫🇷',
   de: '🇩🇪',
-  es: '🇪🇸'
+  es: '🇪🇸',
+  it: '🇮🇹',
+  pt: '🇵🇹',
+  ja: '🇯🇵',
+  ko: '🇰🇷',
+  zh: '🇨🇳',
+  ar: '🇸🇦',
+  hi: '🇮🇳',
+  ru: '🇷🇺'
 };
 
 const languageNames: Record<Language, string> = {
   en: 'English',
   fr: 'Français',
   de: 'Deutsch',
-  es: 'Español'
+  es: 'Español',
+  it: 'Italiano',
+  pt: 'Português',
+  ja: '日本語',
+  ko: '한국어',
+  zh: '中文',
+  ar: 'العربية',
+  hi: 'हिन्दी',
+  ru: 'Русский'
 };
 
 export function LanguageSelector() {

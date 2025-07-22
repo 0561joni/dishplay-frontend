@@ -6,7 +6,15 @@ export const translations: Translation = {
     en: 'Home',
     fr: 'Accueil',
     de: 'Startseite',
-    es: 'Inicio'
+    es: 'Inicio',
+    it: 'Home',
+    pt: 'Início',
+    ja: 'ホーム',
+    ko: '홈',
+    zh: '首页',
+    ar: 'الرئيسية',
+    hi: 'होम',
+    ru: 'Главная'
   },
   menu: {
     en: 'Menu',

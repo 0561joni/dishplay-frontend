@@ -92,15 +92,19 @@ export const api = {
 
   // Translation endpoints
   translate: {
-    menuItem: async (itemId: string, language: string, token: string) => {
+    translateMenu: async (items: any[], targetLanguage: string, token: string) => {
       const validToken = validateToken(token);
-      const response = await fetch(`${API_BASE_URL}/api/translate/menu-item`, {
+      const response = await fetch(`${API_BASE_URL}/api/translation/translate-menu`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${validToken}`,
         },
-        body: JSON.stringify({ itemId, language }),
+        body: JSON.stringify({ 
+          items, 
+          target_language: targetLanguage,
+          source_language: 'auto'
+        }),
       });
       
       if (!response.ok) {

@@ -14,14 +14,15 @@ export interface User {
 
 export interface MenuItem {
   id: string;
-  menu_id: string;
-  item_name: string;
+  menu_id?: string;
+  item_name?: string;
+  name?: string; // API response format
   description: string | null;
   price: number | null;
-  currency: string | null;
-  order_index: number | null;
+  currency?: string | null;
+  order_index?: number | null;
   images: string[];
-  currentImageIndex: number;
+  currentImageIndex?: number;
 }
 
 export interface FavoriteItem {
@@ -47,7 +48,7 @@ export interface ItemImage {
   is_primary: boolean | null;
 }
 
-export type Language = 'en' | 'fr' | 'de' | 'es';
+export type Language = 'en' | 'fr' | 'de' | 'es' | 'it' | 'pt' | 'ja' | 'ko' | 'zh' | 'ar' | 'hi' | 'ru';
 
 export interface Plan {
   id: 'light' | 'normal' | 'pro';
