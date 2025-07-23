@@ -4,10 +4,13 @@ import { useApp } from '../context/AppContext';
 import { translate } from '../utils/translations';
 import { api, getAuthToken, handleApiError } from '../utils/api';
 import { createMenu, updateMenuStatus, createMenuItems, createItemImages, supabase } from '../lib/supabase';
+import { MenuUploadProgress } from './MenuUploadProgress';
 
 export function MenuUpload() {
   const { state, dispatch } = useApp();
   const [error, setError] = useState('');
+  const [uploadingMenuId, setUploadingMenuId] = useState<string | null>(null);
+  const [showProgress, setShowProgress] = useState(false);
 
   const handleFileUpload = useCallback(async (files: FileList | null) => {
     if (!files || files.length === 0) return;
@@ -54,99 +57,19 @@ export function MenuUpload() {
         throw new Error(`Token is malformed: ${tokenParts.length} parts instead of 3`);
       }
       
-      // NOW create menu record in Supabase
-      const menu = await createMenu(state.user.id);
-
-      // Call backend API to process the menu
-      const response = await api.menu.upload(file, token);
+      // Call backend API to process the menu - it will create the menu record
+      const uploadResponse = await api.menu.upload(file, token);
       
-      if (response.success) {
-        // Update menu status to completed
-        await updateMenuStatus(menu.id, 'completed');
-        
-        // Create menu items in Supabase
-      const menuItems = await createMenuItems(
-        menu.id,
-        response.items.map((item: { name: string; description?: string; price?: number }, index: number) => ({
-          item_name: item.name,
-          description: item.description,
-          price: item.price,
-          currency: 'USD',
-          order_index: index
-        }))
-      );
-
-        // Create item images for each menu item
-        for (let i = 0; i < menuItems.length; i++) {
-          const menuItem = menuItems[i];
-          const responseItem = response.items[i];
-          
-          if (responseItem.images && responseItem.images.length > 0) {
-            await createItemImages(menuItem.id, responseItem.images.map((imageUrl: string, imageIndex: number) => ({
-              image_url: imageUrl,
-              source: 'api',
-              is_primary: imageIndex === 0
-            })));
-          }
-        }
-
-        // Transform data for frontend
-        const transformedMenu = {
-          id: menu.id,
-          user_id: menu.user_id,
-          original_image_url: menu.original_image_url,
-          processed_at: menu.processed_at,
-          status: 'completed' as const,
-          name: response.restaurantName || 'Uploaded Menu',
-          items: menuItems.map((item, index) => ({
-            id: item.id,
-            menu_id: item.menu_id,
-            item_name: item.item_name,
-            description: item.description,
-            price: item.price,
-            currency: item.currency,
-            order_index: item.order_index,
-            images: response.items[index]?.images || [],
-            currentImageIndex: 0
-          }))
-        };
-
-        dispatch({ type: 'SET_MENU', payload: transformedMenu });
-        
-        console.log('[MenuUpload] Upload completed successfully');
-        
-        // Force refresh auth session after upload to prevent token corruption
-        try {
-          console.log('[MenuUpload] Refreshing auth session after upload...');
-          if (supabase) {
-            const { data, error } = await supabase.auth.refreshSession();
-            if (error) {
-              console.error('[MenuUpload] Failed to refresh session:', error);
-            } else {
-              console.log('[MenuUpload] Session refreshed successfully');
-            }
-          }
-          
-          // Verify auth state after refresh
-          const postUploadToken = await getAuthToken();
-          console.log('[MenuUpload] Post-upload token check:', {
-            hasToken: !!postUploadToken,
-            length: postUploadToken?.length,
-            parts: postUploadToken?.split('.').length
-          });
-        } catch (e) {
-          console.error('[MenuUpload] Post-upload auth operations failed:', e);
-        }
-        
-        // Auto-navigate to menu view after successful processing
-        setTimeout(() => {
-          // This will be handled by the parent component
-          window.dispatchEvent(new CustomEvent('menuProcessed'));
-        }, 500);
-      } else {
-        await updateMenuStatus(menu.id, 'failed');
-        setError(response.message || 'Failed to process menu');
+      // Set the menu ID from the response and show progress
+      if (uploadResponse.menu_id) {
+        setUploadingMenuId(uploadResponse.menu_id);
+        setShowProgress(true);
+        dispatch({ type: 'SET_LOADING', payload: false }); // Turn off simple loading
+        return; // Exit here - progress component will handle completion
       }
+      
+      // Fallback error - backend should always return menu_id
+      throw new Error('Backend did not return menu ID');
     } catch (error) {
       console.error('Menu upload error:', error);
       const errorResult = handleApiError(error);
@@ -156,6 +79,61 @@ export function MenuUpload() {
     }
   }, [dispatch, state.user]);
 
+  const handleProgressComplete = useCallback(async (success: boolean) => {
+    if (!success || !uploadingMenuId) {
+      setError('Failed to process menu');
+      setShowProgress(false);
+      setUploadingMenuId(null);
+      return;
+    }
+
+    try {
+      // Get the processed menu data
+      const token = await getAuthToken();
+      if (!token) throw new Error('Authentication required');
+      
+      const menuData = await api.menu.getMenu(uploadingMenuId, token);
+      
+      // Transform and set the menu data
+      const transformedMenu = {
+        id: menuData.id,
+        user_id: state.user?.id || '',
+        original_image_url: null,
+        processed_at: menuData.processed_at,
+        status: menuData.status,
+        name: 'Uploaded Menu',
+        items: menuData.items.map((item: any, index: number) => ({
+          id: item.id,
+          menu_id: menuData.id,
+          item_name: item.name,
+          description: item.description,
+          price: item.price,
+          currency: 'USD',
+          order_index: index,
+          images: item.images || [],
+          currentImageIndex: 0
+        }))
+      };
+
+      dispatch({ type: 'SET_MENU', payload: transformedMenu });
+      
+      // Reset state
+      setShowProgress(false);
+      setUploadingMenuId(null);
+      
+      // Auto-navigate to menu view
+      setTimeout(() => {
+        window.dispatchEvent(new CustomEvent('menuProcessed'));
+      }, 500);
+      
+    } catch (error) {
+      console.error('Error fetching processed menu:', error);
+      setError('Failed to load processed menu');
+      setShowProgress(false);
+      setUploadingMenuId(null);
+    }
+  }, [uploadingMenuId, dispatch, state.user]);
+
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     handleFileUpload(e.dataTransfer.files);
@@ -164,6 +142,16 @@ export function MenuUpload() {
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
   }, []);
+
+  // Show progress component when uploading
+  if (showProgress && uploadingMenuId) {
+    return (
+      <MenuUploadProgress
+        menuId={uploadingMenuId}
+        onComplete={handleProgressComplete}
+      />
+    );
+  }
 
   return (
     <div className="max-w-2xl mx-auto p-4 sm:p-6">
@@ -215,7 +203,7 @@ export function MenuUpload() {
         <div className="mt-6 sm:mt-8 text-center">
           <div className="inline-flex items-center gap-2 text-blue-600">
             <div className="animate-spin rounded-full h-4 w-4 border-2 border-blue-600 border-t-transparent"></div>
-            {translate('processing', state.language)}
+            Uploading menu...
           </div>
         </div>
       )}

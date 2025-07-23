@@ -74,6 +74,21 @@ export const api = {
       return response.json();
     },
     
+    getProgress: async (menuId: string, token: string) => {
+      const validToken = validateToken(token);
+      const response = await fetch(`${API_BASE_URL}/api/menu/progress/${menuId}`, {
+        headers: {
+          'Authorization': `Bearer ${validToken}`,
+        },
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      return response.json();
+    },
+    
     getUserMenus: async (token: string) => {
       const validToken = validateToken(token);
       const response = await fetch(`${API_BASE_URL}/api/menu/user`, {
