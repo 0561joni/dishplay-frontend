@@ -51,9 +51,26 @@ export const api = {
       console.log('[API Debug] Response headers:', response.headers);
       
       if (!response.ok) {
-        const errorText = await response.text();
-        console.error('[API Debug] Error response:', errorText);
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const rawError = await response.text();
+        let errorMessage = `HTTP error! status: ${response.status}`;
+
+        if (rawError) {
+          try {
+            const parsed = JSON.parse(rawError);
+            if (parsed?.detail) {
+              errorMessage = parsed.detail;
+            } else if (parsed?.message) {
+              errorMessage = parsed.message;
+            } else {
+              errorMessage = rawError;
+            }
+          } catch {
+            errorMessage = rawError;
+          }
+        }
+
+        console.error('[API Debug] Error response:', rawError || errorMessage);
+        throw new Error(errorMessage);
       }
       
       return response.json();
