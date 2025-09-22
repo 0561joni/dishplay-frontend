@@ -22,6 +22,7 @@ interface AppState {
 type AppAction =
   | { type: 'SET_USER'; payload: User | null }
   | { type: 'SET_MENU'; payload: Menu | null }
+  | { type: 'SET_PREVIOUS_MENU'; payload: { id: string; name?: string | null } }
   | { type: 'ADD_TO_FAVORITES'; payload: MenuItem }
   | { type: 'REMOVE_FROM_FAVORITES'; payload: string }
   | { type: 'CLEAR_FAVORITES' }
@@ -84,6 +85,13 @@ function appReducer(state: AppState, action: AppAction): AppState {
       };
     }
     
+    case 'SET_PREVIOUS_MENU':
+      return {
+        ...state,
+        previousMenuId: action.payload.id,
+        previousMenuName: action.payload.name ?? state.previousMenuName,
+      };
+
     case 'ADD_TO_FAVORITES': {
       const existingItem = state.favorites.find(item => item.id === action.payload.id);
       if (existingItem) {
@@ -378,6 +386,56 @@ export function AppProvider({ children }: { children: ReactNode }) {
       }
     };
   }, []); // Empty dependency array - only run once on mount
+
+  useEffect(() => {
+    let isCancelled = false;
+
+    const preloadPreviousMenu = async () => {
+      if (
+        !state.isInitialized ||
+        !state.user?.id ||
+        state.previousMenuId ||
+        state.isRecallingMenu
+      ) {
+        return;
+      }
+
+      try {
+        const token = await getAuthToken();
+        if (!token) {
+          return;
+        }
+
+        const latestMenuResponse = await api.menu.getLatestMenu(token);
+        const latestMenu = latestMenuResponse?.menu;
+
+        if (!latestMenu || typeof latestMenu.id !== 'string') {
+          return;
+        }
+
+        if (!isCancelled) {
+          dispatch({
+            type: 'SET_PREVIOUS_MENU',
+            payload: {
+              id: latestMenu.id,
+              name: typeof latestMenu.restaurant_name === 'string'
+                ? latestMenu.restaurant_name
+                : undefined,
+            },
+          });
+        }
+      } catch (error) {
+        console.error('Failed to preload latest menu:', error);
+      }
+    };
+
+    preloadPreviousMenu();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [state.isInitialized, state.user?.id, state.previousMenuId, state.currentMenu?.id, state.isRecallingMenu, dispatch]);
+
 
   return (
     <AppContext.Provider value={{ state, dispatch, recallLastMenu }}>

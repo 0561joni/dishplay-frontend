@@ -108,19 +108,34 @@ export const api = {
     
     getUserMenus: async (token: string) => {
       const validToken = validateToken(token);
-      const response = await fetch(`${API_BASE_URL}/api/menu/user`, {
+      const response = await fetch(`${API_BASE_URL}/api/menu/user/all`, {
         headers: {
           'Authorization': `Bearer ${validToken}`,
         },
       });
-      
+
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-      
+
       return response.json();
     },
-  },
+
+    getLatestMenu: async (token: string) => {
+      const validToken = validateToken(token);
+      const response = await fetch(`${API_BASE_URL}/api/menu/user/latest`, {
+        headers: {
+          'Authorization': `Bearer ${validToken}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      return response.json();
+    },
+
 
   // Translation endpoints
   translate: {
