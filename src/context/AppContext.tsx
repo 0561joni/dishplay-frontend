@@ -1,6 +1,8 @@
-import React, { createContext, useContext, useReducer, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useReducer, useEffect, useCallback, ReactNode } from 'react';
 import { User, MenuItem, CartItem, Menu, Language } from '../types';
 import { supabase, getUserProfile } from '../lib/supabase';
+import { api, getAuthToken } from '../utils/api';
+import { transformMenuResponse } from '../utils/menuTransform';
 
 interface AppState {
   user: User | null;
@@ -11,6 +13,10 @@ interface AppState {
   isInitialized: boolean;
   initError: string | null;
   isMobileMenuOpen: boolean;
+  previousMenuId: string | null;
+  previousMenuName: string | null;
+  isRecallingMenu: boolean;
+  recallError: string | null;
 }
 
 type AppAction =
@@ -25,6 +31,8 @@ type AppAction =
   | { type: 'SET_INIT_ERROR'; payload: string | null }
   | { type: 'CYCLE_IMAGE'; payload: { itemId: string; direction: 'next' | 'prev' } }
   | { type: 'TOGGLE_MOBILE_MENU' }
+  | { type: 'SET_RECALLING_MENU'; payload: boolean }
+  | { type: 'SET_RECALL_ERROR'; payload: string | null }
   | { type: 'LOGOUT' };
 
 const initialState: AppState = {
@@ -35,12 +43,17 @@ const initialState: AppState = {
   isLoading: false,
   isInitialized: false,
   initError: null,
-  isMobileMenuOpen: false
+  isMobileMenuOpen: false,
+  previousMenuId: null,
+  previousMenuName: null,
+  isRecallingMenu: false,
+  recallError: null
 };
 
 const AppContext = createContext<{
   state: AppState;
   dispatch: React.Dispatch<AppAction>;
+  recallLastMenu: () => Promise<{ success: boolean; message?: string }>;
 } | null>(null);
 
 function appReducer(state: AppState, action: AppAction): AppState {
@@ -49,10 +62,27 @@ function appReducer(state: AppState, action: AppAction): AppState {
       return { ...state, user: action.payload };
     
     case 'LOGOUT':
-      return { ...state, user: null, currentMenu: null, favorites: [] };
+      return {
+        ...state,
+        user: null,
+        currentMenu: null,
+        favorites: [],
+        previousMenuId: null,
+        previousMenuName: null,
+        isRecallingMenu: false,
+        recallError: null
+      };
     
-    case 'SET_MENU':
-      return { ...state, currentMenu: action.payload };
+    case 'SET_MENU': {
+      const nextMenu = action.payload;
+      return {
+        ...state,
+        previousMenuId: state.currentMenu?.id ?? state.previousMenuId,
+        previousMenuName: state.currentMenu?.name ?? state.previousMenuName,
+        currentMenu: nextMenu,
+        recallError: null
+      };
+    }
     
     case 'ADD_TO_FAVORITES': {
       const existingItem = state.favorites.find(item => item.id === action.payload.id);
@@ -85,6 +115,12 @@ function appReducer(state: AppState, action: AppAction): AppState {
 
     case 'SET_INIT_ERROR':
       return { ...state, initError: action.payload };
+
+    case 'SET_RECALLING_MENU':
+      return { ...state, isRecallingMenu: action.payload };
+
+    case 'SET_RECALL_ERROR':
+      return { ...state, recallError: action.payload };
     
     case 'TOGGLE_MOBILE_MENU':
       return { ...state, isMobileMenuOpen: !state.isMobileMenuOpen };
@@ -115,7 +151,44 @@ function appReducer(state: AppState, action: AppAction): AppState {
 
 export function AppProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(appReducer, initialState);
-  
+
+  const recallLastMenu = useCallback(async (): Promise<{ success: boolean; message?: string }> => {
+    if (!state.previousMenuId) {
+      const message = 'No previous menu available yet.';
+      dispatch({ type: 'SET_RECALL_ERROR', payload: message });
+      return { success: false, message };
+    }
+
+    if (!state.user) {
+      const message = 'Please log in to recall a menu.';
+      dispatch({ type: 'SET_RECALL_ERROR', payload: message });
+      return { success: false, message };
+    }
+
+    dispatch({ type: 'SET_RECALL_ERROR', payload: null });
+    dispatch({ type: 'SET_RECALLING_MENU', payload: true });
+
+    try {
+      const token = await getAuthToken();
+      if (!token) {
+        throw new Error('Authentication token not available');
+      }
+
+      const menuData = await api.menu.getMenu(state.previousMenuId, token);
+      const transformedMenu = transformMenuResponse(menuData, state.user.id);
+      dispatch({ type: 'SET_MENU', payload: transformedMenu });
+      window.dispatchEvent(new CustomEvent('menuProcessed', { detail: { source: 'history' } }));
+      return { success: true };
+    } catch (error) {
+      console.error('Failed to recall previous menu:', error);
+      const message = error instanceof Error ? error.message : 'Failed to recall previous menu';
+      dispatch({ type: 'SET_RECALL_ERROR', payload: message });
+      return { success: false, message };
+    } finally {
+      dispatch({ type: 'SET_RECALLING_MENU', payload: false });
+    }
+  }, [state.previousMenuId, state.user, dispatch]);
+
   // Debug mode - set via URL parameter ?debug=true
   const debugMode = new URLSearchParams(window.location.search).get('debug') === 'true';
 
@@ -307,7 +380,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, []); // Empty dependency array - only run once on mount
 
   return (
-    <AppContext.Provider value={{ state, dispatch }}>
+    <AppContext.Provider value={{ state, dispatch, recallLastMenu }}>
       {children}
     </AppContext.Provider>
   );

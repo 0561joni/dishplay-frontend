@@ -3,6 +3,7 @@ import { Upload } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { translate } from '../utils/translations';
 import { api, getAuthToken, handleApiError } from '../utils/api';
+import { transformMenuResponse } from '../utils/menuTransform';
 import { createMenu, updateMenuStatus, createMenuItems, createItemImages, supabase } from '../lib/supabase';
 import { MenuUploadProgress } from './MenuUploadProgress';
 
@@ -95,25 +96,7 @@ export function MenuUpload() {
       const menuData = await api.menu.getMenu(uploadingMenuId, token);
       
       // Transform and set the menu data
-      const transformedMenu = {
-        id: menuData.id,
-        user_id: state.user?.id || '',
-        original_image_url: null,
-        processed_at: menuData.processed_at,
-        status: menuData.status,
-        name: 'Uploaded Menu',
-        items: menuData.items.map((item: any, index: number) => ({
-          id: item.id,
-          menu_id: menuData.id,
-          item_name: item.name,
-          description: item.description,
-          price: item.price,
-          currency: 'USD',
-          order_index: index,
-          images: item.images || [],
-          currentImageIndex: 0
-        }))
-      };
+      const transformedMenu = transformMenuResponse(menuData, state.user?.id || '');
 
       dispatch({ type: 'SET_MENU', payload: transformedMenu });
       

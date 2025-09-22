@@ -76,6 +76,14 @@ function AppContent() {
     <div className="min-h-screen bg-gray-50">
       <Header />
 
+      {state.recallError && (
+        <div className="max-w-4xl mx-auto px-4 pt-4">
+          <div className="bg-yellow-50 border border-yellow-200 text-yellow-700 px-4 py-3 rounded-lg text-sm">
+            {state.recallError}
+          </div>
+        </div>
+      )}
+
       {/* Main Content */}
       <main className="py-4 sm:py-8 relative pb-20 sm:pb-8">
         {/* Floating Navigation */}
