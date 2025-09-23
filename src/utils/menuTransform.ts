@@ -41,6 +41,8 @@ export function transformMenuResponse(menuData: RawMenuResponse, userId: string)
       currency: item.currency ?? null,
       order_index: item.order_index ?? index,
       images: Array.isArray(item.images) ? [...item.images] : [],
+      imageStatus: Array.isArray(item.images) && item.images.length > 0 ? 'ready' : 'loading',
+      imageSources: [],
       currentImageIndex: typeof item.currentImageIndex === 'number' ? item.currentImageIndex : 0,
     };
   });

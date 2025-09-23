@@ -1,9 +1,29 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { getAuthToken } from '../utils/api';
+import { useApp } from '../context/AppContext';
+import { Menu, MenuItem } from '../types';
 
 interface ProgressMessage {
   text: string;
   emoji: string;
+}
+
+interface ItemSnapshot {
+  id: string;
+  name: string;
+  description?: string | null;
+  price?: number | null;
+  currency?: string | null;
+  order_index?: number | null;
+}
+
+interface ItemImageUpdate {
+  menu_item_id: string;
+  images: string[];
+  status?: 'ready' | 'fallback';
+  primary_image?: string | null;
+  sequence?: string;
+  sources?: { url: string; source?: string | null }[];
 }
 
 interface ProgressData {
@@ -14,6 +34,9 @@ interface ProgressData {
   message: ProgressMessage;
   estimated_time_remaining: number;
   item_count: number;
+  menu_name?: string;
+  items_snapshot?: ItemSnapshot[];
+  item_image_update?: ItemImageUpdate;
 }
 
 interface MenuUploadProgressProps {
@@ -22,11 +45,29 @@ interface MenuUploadProgressProps {
 }
 
 export function MenuUploadProgress({ menuId, onComplete }: MenuUploadProgressProps) {
+  const { state, dispatch } = useApp();
   const [progress, setProgress] = useState<ProgressData | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const hasInitializedMenuRef = useRef(false);
+  const processedSequencesRef = useRef<Set<string>>(new Set());
+  const userIdRef = useRef(state.user?.id ?? '');
 
   // Format time remaining
+  useEffect(() => {
+    userIdRef.current = state.user?.id ?? '';
+  }, [state.user?.id]);
+
+  useEffect(() => {
+    hasInitializedMenuRef.current = false;
+    processedSequencesRef.current.clear();
+  }, [menuId]);
+
+  useEffect(() => () => {
+    processedSequencesRef.current.clear();
+    hasInitializedMenuRef.current = false;
+  }, []);
+
   const formatTimeRemaining = (seconds: number): string => {
     if (seconds < 60) {
       return `${Math.ceil(seconds)} seconds`;
@@ -56,6 +97,69 @@ export function MenuUploadProgress({ menuId, onComplete }: MenuUploadProgressPro
     return stageDescriptions[stage] || 'Processing...';
   };
 
+  const buildMenuSkeleton = useCallback((snapshot: ItemSnapshot[], data: ProgressData): Menu => {
+    const sortedSnapshot = [...snapshot].sort((a, b) => (a.order_index ?? 0) - (b.order_index ?? 0));
+
+    const placeholderItems: MenuItem[] = sortedSnapshot.map((snapshotItem, index) => ({
+      id: snapshotItem.id,
+      menu_id: menuId,
+      item_name: snapshotItem.name,
+      name: snapshotItem.name,
+      description: snapshotItem.description ?? null,
+      price: snapshotItem.price ?? null,
+      currency: snapshotItem.currency ?? null,
+      order_index: snapshotItem.order_index ?? index,
+      images: [],
+      imageStatus: 'loading',
+      imageSources: [],
+      currentImageIndex: 0,
+    }));
+
+    return {
+      id: menuId,
+      user_id: userIdRef.current || '',
+      original_image_url: null,
+      processed_at: new Date().toISOString(),
+      status: 'processing',
+      name: data.menu_name ?? 'Uploaded Menu',
+      items: placeholderItems,
+    };
+  }, [menuId]);
+
+  const applyProgressData = useCallback((data: ProgressData) => {
+    if (Array.isArray(data.items_snapshot) && data.items_snapshot.length > 0 && !hasInitializedMenuRef.current) {
+      const placeholderMenu = buildMenuSkeleton(data.items_snapshot, data);
+      dispatch({ type: 'SET_MENU', payload: placeholderMenu });
+      hasInitializedMenuRef.current = true;
+    }
+
+    if (data.item_image_update && data.item_image_update.menu_item_id) {
+      const sequence = data.item_image_update.sequence || `${data.item_image_update.menu_item_id}-${Date.now()}`;
+      if (!processedSequencesRef.current.has(sequence)) {
+        processedSequencesRef.current.add(sequence);
+        dispatch({
+          type: 'UPDATE_MENU_ITEM_IMAGES',
+          payload: {
+            menuId: data.menu_id,
+            itemId: data.item_image_update.menu_item_id,
+            images: data.item_image_update.images || [],
+            status: data.item_image_update.status,
+            sources: data.item_image_update.sources,
+          },
+        });
+      }
+    }
+
+    setProgress(data);
+
+    if (data.status === 'completed' || data.status === 'failed') {
+      processedSequencesRef.current.clear();
+      hasInitializedMenuRef.current = false;
+    }
+
+    return data.status;
+  }, [buildMenuSkeleton, dispatch, setProgress]);
+
   // Connect to WebSocket for real-time updates
   useEffect(() => {
     let ws: WebSocket | null = null;
@@ -75,12 +179,11 @@ export function MenuUploadProgress({ menuId, onComplete }: MenuUploadProgressPro
 
         ws.onmessage = (event) => {
           try {
-            const data = JSON.parse(event.data);
-            setProgress(data);
+            const data: ProgressData = JSON.parse(event.data);
+            const status = applyProgressData(data);
 
-            // Check if completed
-            if (data.status === 'completed' || data.status === 'failed') {
-              onComplete?.(data.status === 'completed');
+            if (status === 'completed' || status === 'failed') {
+              onComplete?.(status === 'completed');
             }
           } catch (err) {
             console.error('Failed to parse WebSocket message:', err);
@@ -128,7 +231,7 @@ export function MenuUploadProgress({ menuId, onComplete }: MenuUploadProgressPro
         ws.close();
       }
     };
-  }, [menuId, onComplete, progress?.status]);
+  }, [menuId, onComplete, progress?.status, applyProgressData]);
 
   // Fallback polling if WebSocket fails
   useEffect(() => {
@@ -145,11 +248,11 @@ export function MenuUploadProgress({ menuId, onComplete }: MenuUploadProgressPro
         });
 
         if (response.ok) {
-          const data = await response.json();
-          setProgress(data);
+          const data: ProgressData = await response.json();
+          const status = applyProgressData(data);
 
-          if (data.status === 'completed' || data.status === 'failed') {
-            onComplete?.(data.status === 'completed');
+          if (status === 'completed' || status === 'failed') {
+            onComplete?.(status === 'completed');
           }
         }
       } catch (err) {
@@ -161,7 +264,7 @@ export function MenuUploadProgress({ menuId, onComplete }: MenuUploadProgressPro
     pollProgress(); // Initial fetch
 
     return () => clearInterval(interval);
-  }, [menuId, isConnected, onComplete]);
+  }, [menuId, isConnected, onComplete, applyProgressData]);
 
   if (!progress) {
     return (

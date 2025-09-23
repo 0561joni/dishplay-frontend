@@ -34,6 +34,7 @@ type AppAction =
   | { type: 'TOGGLE_MOBILE_MENU' }
   | { type: 'SET_RECALLING_MENU'; payload: boolean }
   | { type: 'SET_RECALL_ERROR'; payload: string | null }
+  | { type: 'UPDATE_MENU_ITEM_IMAGES'; payload: { menuId: string; itemId: string; images: string[]; status?: 'ready' | 'fallback'; sources?: { url: string; source?: string | null }[] } }
   | { type: 'LOGOUT' };
 
 const initialState: AppState = {
@@ -76,21 +77,90 @@ function appReducer(state: AppState, action: AppAction): AppState {
     
     case 'SET_MENU': {
       const nextMenu = action.payload;
+      const previousMenuId = state.currentMenu?.id ?? state.previousMenuId;
+      const previousMenuName = state.currentMenu?.name ?? state.previousMenuName;
+
+      if (!nextMenu) {
+        return {
+          ...state,
+          previousMenuId,
+          previousMenuName,
+          currentMenu: null,
+          recallError: null,
+        };
+      }
+
+      let mergedItems = nextMenu.items;
+      if (state.currentMenu && state.currentMenu.id === nextMenu.id) {
+        const existingMap = new Map(state.currentMenu.items.map(item => [item.id, item]));
+        mergedItems = nextMenu.items.map(item => {
+          const existing = existingMap.get(item.id);
+          if (!existing) {
+            return item;
+          }
+
+          const nextImages = item.images && item.images.length ? item.images : existing.images;
+          return {
+            ...item,
+            images: nextImages,
+            currentImageIndex: existing.currentImageIndex ?? 0,
+            imageStatus: item.imageStatus ?? existing.imageStatus,
+            imageSources: item.imageSources && item.imageSources.length ? item.imageSources : existing.imageSources,
+          };
+        });
+      }
+
       return {
         ...state,
-        previousMenuId: state.currentMenu?.id ?? state.previousMenuId,
-        previousMenuName: state.currentMenu?.name ?? state.previousMenuName,
-        currentMenu: nextMenu,
-        recallError: null
+        previousMenuId,
+        previousMenuName,
+        currentMenu: {
+          ...nextMenu,
+          items: mergedItems,
+        },
+        recallError: null,
       };
     }
-    
+
     case 'SET_PREVIOUS_MENU':
       return {
         ...state,
         previousMenuId: action.payload.id,
         previousMenuName: action.payload.name ?? state.previousMenuName,
       };
+
+    case 'UPDATE_MENU_ITEM_IMAGES': {
+      if (!state.currentMenu || state.currentMenu.id !== action.payload.menuId) {
+        return state;
+      }
+
+      const updatedItems = state.currentMenu.items.map((item) => {
+        if (item.id !== action.payload.itemId) {
+          return item;
+        }
+
+        const nextImages = Array.isArray(action.payload.images) ? action.payload.images : [];
+        const nextStatus = action.payload.status ?? 'ready';
+
+        const nextIndex = nextImages.length ? Math.min(item.currentImageIndex ?? 0, nextImages.length - 1) : (item.currentImageIndex ?? 0);
+        return {
+          ...item,
+          images: nextImages,
+          imageStatus: nextStatus,
+          imageSources: action.payload.sources ?? item.imageSources ?? [],
+          currentImageIndex: nextIndex,
+        };
+      });
+
+      return {
+        ...state,
+        currentMenu: {
+          ...state.currentMenu,
+          status: state.currentMenu.status === 'completed' ? state.currentMenu.status : 'processing',
+          items: updatedItems,
+        },
+      };
+    }
 
     case 'ADD_TO_FAVORITES': {
       const existingItem = state.favorites.find(item => item.id === action.payload.id);

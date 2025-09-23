@@ -101,8 +101,10 @@ export function MenuDisplay() {
         const liveItem = state.currentMenu?.items[index];
         return {
           ...translatedItem,
-          currentImageIndex: liveItem?.currentImageIndex || 0, // Use current image index from live state
-          images: liveItem?.images || translatedItem.images || [] // Ensure images are preserved
+          currentImageIndex: liveItem?.currentImageIndex ?? 0, // Use current image index from live state
+          images: liveItem?.images || translatedItem.images || [], // Ensure images are preserved
+          imageStatus: liveItem?.imageStatus ?? translatedItem.imageStatus,
+          imageSources: liveItem?.imageSources ?? translatedItem.imageSources ?? [],
         };
       })
     : state.currentMenu?.items || [];
@@ -129,6 +131,12 @@ export function MenuDisplay() {
           </div>
         </div>
       )}
+      {state.currentMenu.status !== 'completed' && (
+        <div className="mb-4 text-center text-sm text-orange-600 animate-pulse">
+          Our chef-bot is still plating the photos -- watch them pop in as they finish!
+        </div>
+      )}
+
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
         {displayItems.map((item) => (
           <MenuItemCard key={item.id} item={item} />

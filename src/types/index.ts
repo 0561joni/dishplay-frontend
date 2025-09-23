@@ -22,6 +22,8 @@ export interface MenuItem {
   currency?: string | null;
   order_index?: number | null;
   images: string[];
+  imageStatus?: 'loading' | 'ready' | 'fallback';
+  imageSources?: { url: string; source?: string | null }[];
   currentImageIndex?: number;
 }
 
