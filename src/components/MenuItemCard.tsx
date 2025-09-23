@@ -102,7 +102,7 @@ export function MenuItemCard({ item }: MenuItemCardProps) {
             {item.images.map((_, index) => (
               <div
                 key={index}
-                className={`w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full transition-colors ${index === currentImageIndex ? 'bg-white' : 'bg-white bg-opacity-50'}\`}
+                className={`w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full transition-colors ${index === currentImageIndex ? 'bg-white' : 'bg-white bg-opacity-50'}`}
               />
             ))}
           </div>

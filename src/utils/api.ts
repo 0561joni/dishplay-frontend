@@ -137,7 +137,7 @@ export const api = {
 
       return response.json();
     },
-
+  },
 
   // Translation endpoints
   translate: {
