@@ -4,6 +4,11 @@ import { supabase, getUserProfile } from '../lib/supabase';
 import { api, getAuthToken } from '../utils/api';
 import { transformMenuResponse } from '../utils/menuTransform';
 
+interface RecentMenuEntry {
+  id: string;
+  name: string;
+}
+
 interface AppState {
   user: User | null;
   currentMenu: Menu | null;
@@ -17,6 +22,7 @@ interface AppState {
   previousMenuName: string | null;
   isRecallingMenu: boolean;
   recallError: string | null;
+  recentMenus: RecentMenuEntry[];
 }
 
 type AppAction =
@@ -34,6 +40,7 @@ type AppAction =
   | { type: 'TOGGLE_MOBILE_MENU' }
   | { type: 'SET_RECALLING_MENU'; payload: boolean }
   | { type: 'SET_RECALL_ERROR'; payload: string | null }
+  | { type: 'SET_RECENT_MENUS'; payload: RecentMenuEntry[] }
   | { type: 'UPDATE_MENU_ITEM_IMAGES'; payload: { menuId: string; itemId: string; images: string[]; status?: 'ready' | 'fallback'; sources?: { url: string; source?: string | null }[] } }
   | { type: 'LOGOUT' };
 
@@ -49,14 +56,49 @@ const initialState: AppState = {
   previousMenuId: null,
   previousMenuName: null,
   isRecallingMenu: false,
-  recallError: null
+  recallError: null,
+  recentMenus: [],
 };
 
 const AppContext = createContext<{
   state: AppState;
   dispatch: React.Dispatch<AppAction>;
   recallLastMenu: () => Promise<{ success: boolean; message?: string }>;
+  recallMenuById: (menuId: string) => Promise<{ success: boolean; message?: string }>;
 } | null>(null);
+
+const normalizeMenuName = (name?: string | null): string => {
+  if (!name) {
+    return 'Uploaded Menu';
+  }
+  const trimmed = name.trim();
+  return trimmed.length > 0 ? trimmed : 'Uploaded Menu';
+};
+
+const addRecentMenu = (existing: RecentMenuEntry[], entry?: { id?: string; name?: string | null }): RecentMenuEntry[] => {
+  if (!entry?.id) {
+    return existing;
+  }
+  const normalized = { id: entry.id, name: normalizeMenuName(entry.name) };
+  const filtered = existing.filter((menu) => menu.id !== normalized.id);
+  return [normalized, ...filtered].slice(0, 3);
+};
+
+const setRecentMenuList = (entries: { id?: string; name?: string | null }[]): RecentMenuEntry[] => {
+  const result: RecentMenuEntry[] = [];
+  const seen = new Set<string>();
+  for (const entry of entries) {
+    if (!entry?.id || seen.has(entry.id)) {
+      continue;
+    }
+    seen.add(entry.id);
+    result.push({ id: entry.id, name: normalizeMenuName(entry.name) });
+    if (result.length >= 3) {
+      break;
+    }
+  }
+  return result;
+};
 
 function appReducer(state: AppState, action: AppAction): AppState {
   switch (action.type) {
@@ -72,7 +114,8 @@ function appReducer(state: AppState, action: AppAction): AppState {
         previousMenuId: null,
         previousMenuName: null,
         isRecallingMenu: false,
-        recallError: null
+        recallError: null,
+        recentMenus: [],
       };
     
     case 'SET_MENU': {
@@ -87,6 +130,7 @@ function appReducer(state: AppState, action: AppAction): AppState {
           previousMenuName,
           currentMenu: null,
           recallError: null,
+          recentMenus: state.recentMenus,
         };
       }
 
@@ -110,6 +154,10 @@ function appReducer(state: AppState, action: AppAction): AppState {
         });
       }
 
+      const updatedRecentMenus = nextMenu.status === 'completed'
+        ? addRecentMenu(state.recentMenus, { id: nextMenu.id, name: nextMenu.name })
+        : state.recentMenus;
+
       return {
         ...state,
         previousMenuId,
@@ -119,6 +167,7 @@ function appReducer(state: AppState, action: AppAction): AppState {
           items: mergedItems,
         },
         recallError: null,
+        recentMenus: updatedRecentMenus,
       };
     }
 
@@ -126,8 +175,19 @@ function appReducer(state: AppState, action: AppAction): AppState {
       return {
         ...state,
         previousMenuId: action.payload.id,
-        previousMenuName: action.payload.name ?? state.previousMenuName,
+        previousMenuName: normalizeMenuName(action.payload.name ?? state.previousMenuName),
+        recentMenus: addRecentMenu(state.recentMenus, action.payload),
       };
+
+    case 'SET_RECENT_MENUS': {
+      const normalized = setRecentMenuList(action.payload);
+      return {
+        ...state,
+        recentMenus: normalized,
+        previousMenuId: normalized[0]?.id ?? state.previousMenuId,
+        previousMenuName: normalized[0]?.name ?? state.previousMenuName,
+      };
+    }
 
     case 'UPDATE_MENU_ITEM_IMAGES': {
       if (!state.currentMenu || state.currentMenu.id !== action.payload.menuId) {
@@ -230,9 +290,10 @@ function appReducer(state: AppState, action: AppAction): AppState {
 export function AppProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(appReducer, initialState);
 
-  const recallLastMenu = useCallback(async (): Promise<{ success: boolean; message?: string }> => {
-    if (!state.previousMenuId) {
-      const message = 'No previous menu available yet.';
+  const recallMenuById = useCallback(async (menuId: string): Promise<{ success: boolean; message?: string }> => {
+    const trimmedId = menuId?.trim();
+    if (!trimmedId) {
+      const message = 'No menu selected yet.';
       dispatch({ type: 'SET_RECALL_ERROR', payload: message });
       return { success: false, message };
     }
@@ -252,20 +313,31 @@ export function AppProvider({ children }: { children: ReactNode }) {
         throw new Error('Authentication token not available');
       }
 
-      const menuData = await api.menu.getMenu(state.previousMenuId, token);
+      const menuData = await api.menu.getMenu(trimmedId, token);
       const transformedMenu = transformMenuResponse(menuData, state.user.id);
       dispatch({ type: 'SET_MENU', payload: transformedMenu });
       window.dispatchEvent(new CustomEvent('menuProcessed', { detail: { source: 'history' } }));
       return { success: true };
     } catch (error) {
-      console.error('Failed to recall previous menu:', error);
-      const message = error instanceof Error ? error.message : 'Failed to recall previous menu';
+      console.error('Failed to recall menu:', error);
+      const message = error instanceof Error ? error.message : 'Failed to recall menu';
       dispatch({ type: 'SET_RECALL_ERROR', payload: message });
       return { success: false, message };
     } finally {
       dispatch({ type: 'SET_RECALLING_MENU', payload: false });
     }
-  }, [state.previousMenuId, state.user, dispatch]);
+  }, [state.user, dispatch]);
+
+  const recallLastMenu = useCallback(async (): Promise<{ success: boolean; message?: string }> => {
+    const targetMenuId = state.recentMenus[0]?.id || state.previousMenuId;
+    if (!targetMenuId) {
+      const message = 'No recent menus available yet.';
+      dispatch({ type: 'SET_RECALL_ERROR', payload: message });
+      return { success: false, message };
+    }
+
+    return recallMenuById(targetMenuId);
+  }, [state.recentMenus, state.previousMenuId, recallMenuById, dispatch]);
 
   // Debug mode - set via URL parameter ?debug=true
   const debugMode = new URLSearchParams(window.location.search).get('debug') === 'true';
@@ -465,7 +537,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         !state.isInitialized ||
         !state.user?.id ||
         state.previousMenuId ||
-        state.isRecallingMenu
+        state.isRecallingMenu ||
+        state.recentMenus.length > 0
       ) {
         return;
       }
@@ -476,26 +549,29 @@ export function AppProvider({ children }: { children: ReactNode }) {
           return;
         }
 
-        const latestMenuResponse = await api.menu.getLatestMenu(token);
-        const latestMenu = latestMenuResponse?.menu;
+        const latestMenuResponse = await api.menu.getLatestMenu(token, 3);
+        const recent = Array.isArray(latestMenuResponse?.menus) ? latestMenuResponse.menus : [];
 
-        if (!latestMenu || typeof latestMenu.id !== 'string') {
+        if (!recent.length || isCancelled) {
           return;
         }
 
-        if (!isCancelled) {
-          dispatch({
-            type: 'SET_PREVIOUS_MENU',
-            payload: {
-              id: latestMenu.id,
-              name: typeof latestMenu.restaurant_name === 'string'
-                ? latestMenu.restaurant_name
-                : undefined,
-            },
-          });
+        const formatted = recent
+          .filter((menu): menu is { id: string; restaurant_name?: string | null; name?: string | null } =>
+            typeof menu?.id === 'string' && menu.id.trim().length > 0,
+          )
+          .map((menu) => ({
+            id: menu.id,
+            name: typeof menu.restaurant_name === 'string' ? menu.restaurant_name : menu.name,
+          }));
+
+        if (formatted.length === 0) {
+          return;
         }
+
+        dispatch({ type: 'SET_RECENT_MENUS', payload: formatted });
       } catch (error) {
-        console.error('Failed to preload latest menu:', error);
+        console.error('Failed to preload latest menus:', error);
       }
     };
 
@@ -504,11 +580,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
     return () => {
       isCancelled = true;
     };
-  }, [state.isInitialized, state.user?.id, state.previousMenuId, state.currentMenu?.id, state.isRecallingMenu, dispatch]);
+  }, [state.isInitialized, state.user?.id, state.previousMenuId, state.currentMenu?.id, state.isRecallingMenu, state.recentMenus.length, dispatch]);
 
 
   return (
-    <AppContext.Provider value={{ state, dispatch, recallLastMenu }}>
+    <AppContext.Provider value={{ state, dispatch, recallLastMenu, recallMenuById }}>
       {children}
     </AppContext.Provider>
   );

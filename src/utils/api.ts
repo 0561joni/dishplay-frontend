@@ -121,9 +121,11 @@ export const api = {
       return response.json();
     },
 
-    getLatestMenu: async (token: string) => {
+    getLatestMenu: async (token: string, limit = 1) => {
       const validToken = validateToken(token);
-      const response = await fetch(`${API_BASE_URL}/api/menu/user/latest`, {
+      const normalizedLimit = Math.max(1, Math.min(limit, 10));
+      const url = `${API_BASE_URL}/api/menu/user/latest${normalizedLimit > 1 ? `?limit=${normalizedLimit}` : ''}`;
+      const response = await fetch(url, {
         headers: {
           'Authorization': `Bearer ${validToken}`,
         },
