@@ -16,7 +16,6 @@ type RawMenuItem = {
 type RawMenuResponse = {
   id: string;
   user_id?: string;
-  original_image_url?: string | null;
   processed_at?: string;
   status?: string;
   name?: string;
@@ -50,7 +49,7 @@ export function transformMenuResponse(menuData: RawMenuResponse, userId: string)
   return {
     id: menuData.id,
     user_id: userId,
-    original_image_url: menuData.original_image_url ?? null,
+    title: fallbackName,
     processed_at: menuData.processed_at || new Date().toISOString(),
     status: (menuData.status as Menu['status']) || 'completed',
     name: fallbackName,

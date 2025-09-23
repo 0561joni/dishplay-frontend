@@ -176,14 +176,14 @@ export const getUserMenus = async (userId: string) => {
 };
 
 // Helper function to create a new menu
-export const createMenu = async (userId: string, originalImageUrl?: string) => {
+export const createMenu = async (userId: string, title?: string) => {
   if (!supabase) throw new Error('Supabase not initialized');
   
   const { data, error } = await supabase
     .from('menus')
     .insert({
       user_id: userId,
-      original_image_url: originalImageUrl,
+      title: title ?? 'Uploaded Menu',
       status: 'processing'
     })
     .select()

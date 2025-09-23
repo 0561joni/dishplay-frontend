@@ -34,7 +34,7 @@ interface ProgressData {
   message: ProgressMessage;
   estimated_time_remaining: number;
   item_count: number;
-  menu_name?: string;
+  menu_title?: string;
   items_snapshot?: ItemSnapshot[];
   item_image_update?: ItemImageUpdate;
 }
@@ -115,13 +115,15 @@ export function MenuUploadProgress({ menuId, onComplete }: MenuUploadProgressPro
       currentImageIndex: 0,
     }));
 
+    const resolvedTitle = data.menu_title ?? 'Uploaded Menu';
+
     return {
       id: menuId,
       user_id: userIdRef.current || '',
-      original_image_url: null,
+      title: resolvedTitle,
       processed_at: new Date().toISOString(),
       status: 'processing',
-      name: data.menu_name ?? 'Uploaded Menu',
+      name: resolvedTitle,
       items: placeholderItems,
     };
   }, [menuId]);
@@ -152,13 +154,29 @@ export function MenuUploadProgress({ menuId, onComplete }: MenuUploadProgressPro
 
     setProgress(data);
 
+    if (data.menu_title) {
+      const normalizedTitle = data.menu_title.trim() || 'Uploaded Menu';
+      if (state.currentMenu && state.currentMenu.id === menuId) {
+        if (state.currentMenu.title !== normalizedTitle || state.currentMenu.name !== normalizedTitle) {
+          dispatch({
+            type: 'SET_MENU',
+            payload: {
+              ...state.currentMenu,
+              title: normalizedTitle,
+              name: normalizedTitle,
+            },
+          });
+        }
+      }
+    }
+
     if (data.status === 'completed' || data.status === 'failed') {
       processedSequencesRef.current.clear();
       hasInitializedMenuRef.current = false;
     }
 
     return data.status;
-  }, [buildMenuSkeleton, dispatch, setProgress]);
+  }, [buildMenuSkeleton, dispatch, menuId, setProgress, state.currentMenu]);
 
   // Connect to WebSocket for real-time updates
   useEffect(() => {

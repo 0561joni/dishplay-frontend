@@ -35,7 +35,7 @@ export interface FavoriteItem {
 export interface Menu {
   id: string;
   user_id: string;
-  original_image_url: string | null;
+  title: string;
   processed_at: string;
   status: 'processing' | 'completed' | 'failed';
   name: string; // Derived from processing

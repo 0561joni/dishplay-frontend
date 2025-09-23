@@ -5,7 +5,7 @@
     - `menus`
       - `id` (uuid, primary key)
       - `user_id` (uuid, foreign key to users.id)
-      - `original_image_url` (text, nullable)
+      - `title` (text, nullable)
       - `processed_at` (timestamp with timezone)
       - `status` (text, default 'processing')
 
@@ -18,7 +18,7 @@
 CREATE TABLE IF NOT EXISTS menus (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  original_image_url text,
+  title text,
   processed_at timestamptz DEFAULT now() NOT NULL,
   status text DEFAULT 'processing' CHECK (status IN ('processing', 'completed', 'failed')) NOT NULL
 );

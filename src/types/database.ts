@@ -40,21 +40,21 @@ export interface Database {
         Row: {
           id: string;
           user_id: string;
-          original_image_url: string | null;
+          title: string | null;
           processed_at: string;
           status: 'processing' | 'completed' | 'failed';
         };
         Insert: {
           id?: string;
           user_id: string;
-          original_image_url?: string | null;
+          title?: string | null;
           processed_at?: string;
           status?: 'processing' | 'completed' | 'failed';
         };
         Update: {
           id?: string;
           user_id?: string;
-          original_image_url?: string | null;
+          title?: string | null;
           processed_at?: string;
           status?: 'processing' | 'completed' | 'failed';
         };
