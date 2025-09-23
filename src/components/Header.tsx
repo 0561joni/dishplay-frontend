@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Heart, Utensils, Menu, History } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { MobileMenu } from './MobileMenu';
@@ -6,7 +6,21 @@ import { MobileMenu } from './MobileMenu';
 export function Header() {
   const { state, dispatch, recallMenuById } = useApp();
   const favoritesCount = state.favorites.length;
-  const recentMenus = state.recentMenus.slice(0, 3);
+  const recentMenus = useMemo(() => {
+    const seen = new Set<string>();
+    const unique = [];
+    for (const menu of state.recentMenus) {
+      if (!menu?.id || seen.has(menu.id)) {
+        continue;
+      }
+      seen.add(menu.id);
+      unique.push(menu);
+      if (unique.length >= 3) {
+        break;
+      }
+    }
+    return unique;
+  }, [state.recentMenus]);
 
   const [isHistoryMenuOpen, setHistoryMenuOpen] = useState(false);
   const historyButtonRef = useRef<HTMLButtonElement | null>(null);
@@ -127,10 +141,10 @@ export function Header() {
                             <button
                               type="button"
                               onClick={() => handleRecall(menu.id)}
-                              className="w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center justify-between"
+                              className="w-full px-3 py-2 text-left text-sm text-gray-700 bg-gray-50 hover:bg-gray-100 active:bg-gray-200 rounded-lg transition-colors flex items-center justify-between gap-2"
                             >
-                              <span className="truncate pr-2">{menu.name}</span>
-                              <span className="text-xs text-blue-500">Recall</span>
+                              <span className="truncate">{menu.name}</span>
+                              <span className="text-xs text-gray-400">↻</span>
                             </button>
                           </li>
                         ))}
