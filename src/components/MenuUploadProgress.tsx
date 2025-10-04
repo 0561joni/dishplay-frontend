@@ -52,6 +52,8 @@ export function MenuUploadProgress({ menuId, onComplete }: MenuUploadProgressPro
   const hasInitializedMenuRef = useRef(false);
   const processedSequencesRef = useRef<Set<string>>(new Set());
   const userIdRef = useRef(state.user?.id ?? '');
+  const mountTimeRef = useRef<number>(Date.now());
+  const minDisplayTime = 3000; // Minimum 3 seconds display time
 
   // Add debugging
   useEffect(() => {
@@ -250,7 +252,19 @@ export function MenuUploadProgress({ menuId, onComplete }: MenuUploadProgressPro
 
             if (status === 'completed' || status === 'failed') {
               console.log('[MenuUploadProgress] Processing complete, status:', status);
-              onComplete?.(status === 'completed');
+
+              // Ensure minimum display time before calling onComplete
+              const elapsed = Date.now() - mountTimeRef.current;
+              const remainingTime = Math.max(0, minDisplayTime - elapsed);
+
+              if (remainingTime > 0) {
+                console.log(`[MenuUploadProgress] Waiting ${remainingTime}ms before completing to show progress screen`);
+                setTimeout(() => {
+                  onComplete?.(status === 'completed');
+                }, remainingTime);
+              } else {
+                onComplete?.(status === 'completed');
+              }
             }
           } catch (err) {
             console.error('[MenuUploadProgress] Failed to parse WebSocket message:', err, event.data);
@@ -319,7 +333,18 @@ export function MenuUploadProgress({ menuId, onComplete }: MenuUploadProgressPro
           const status = applyProgressData(data);
 
           if (status === 'completed' || status === 'failed') {
-            onComplete?.(status === 'completed');
+            // Ensure minimum display time before calling onComplete
+            const elapsed = Date.now() - mountTimeRef.current;
+            const remainingTime = Math.max(0, minDisplayTime - elapsed);
+
+            if (remainingTime > 0) {
+              console.log(`[MenuUploadProgress] (Polling) Waiting ${remainingTime}ms before completing to show progress screen`);
+              setTimeout(() => {
+                onComplete?.(status === 'completed');
+              }, remainingTime);
+            } else {
+              onComplete?.(status === 'completed');
+            }
           }
         }
       } catch (err) {
