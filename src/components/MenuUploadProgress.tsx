@@ -183,8 +183,16 @@ export function MenuUploadProgress({ menuId, onComplete }: MenuUploadProgressPro
     }
 
     if (data.item_image_update && data.item_image_update.menu_item_id) {
+      console.log('[MenuUploadProgress] Received item_image_update:', {
+        itemId: data.item_image_update.menu_item_id,
+        imageCount: data.item_image_update.images?.length || 0,
+        status: data.item_image_update.status,
+        images: data.item_image_update.images
+      });
+
       const sequence = data.item_image_update.sequence || `${data.item_image_update.menu_item_id}-${Date.now()}`;
       if (!processedSequencesRef.current.has(sequence)) {
+        console.log('[MenuUploadProgress] Dispatching UPDATE_MENU_ITEM_IMAGES for item:', data.item_image_update.menu_item_id);
         processedSequencesRef.current.add(sequence);
         dispatch({
           type: 'UPDATE_MENU_ITEM_IMAGES',
@@ -196,6 +204,8 @@ export function MenuUploadProgress({ menuId, onComplete }: MenuUploadProgressPro
             sources: data.item_image_update.sources,
           },
         });
+      } else {
+        console.log('[MenuUploadProgress] Skipping duplicate sequence:', sequence);
       }
     }
 
