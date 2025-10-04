@@ -2,6 +2,7 @@ import React from 'react';
 import { ChevronLeft, ChevronRight, Heart } from 'lucide-react';
 import { MenuItem } from '../types';
 import { useApp } from '../context/AppContext';
+import { ImageSourceIcon } from './ImageSourceIcon';
 
 interface MenuItemCardProps {
   item: MenuItem;
@@ -52,6 +53,9 @@ export function MenuItemCard({ item }: MenuItemCardProps) {
   const showImage = isImageReady && hasImages;
   const showNavigation = showImage && item.images.length > 1;
   const loadingMessage = getLoadingMessage(item);
+
+  // Get the current image source
+  const currentImageSource = item.imageSources?.[currentImageIndex]?.source;
 
   return (
     <div className="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-lg transition-shadow touch-manipulation">
@@ -123,17 +127,26 @@ export function MenuItemCard({ item }: MenuItemCardProps) {
               <span className="text-base sm:text-lg font-bold text-gray-900">${item.price}</span>
             )}
           </div>
-          
-          <button
-            onClick={handleToggleFavorite}
-            className={`p-2 sm:p-2.5 rounded-lg font-medium transition-colors flex items-center gap-2 touch-manipulation ${
-              isFavorite 
-                ? 'bg-red-50 text-red-600 hover:bg-red-100' 
-                : 'bg-gray-50 text-gray-600 hover:bg-gray-100'
-            }`}
-          >
-            <Heart className={`w-4 h-4 sm:w-5 sm:h-5 ${isFavorite ? 'fill-current' : ''}`} />
-          </button>
+
+          <div className="flex items-center gap-2">
+            {/* Image source indicator */}
+            {showImage && currentImageSource && (
+              <div className="p-2 rounded-lg bg-gray-50 text-gray-500">
+                <ImageSourceIcon source={currentImageSource} />
+              </div>
+            )}
+
+            <button
+              onClick={handleToggleFavorite}
+              className={`p-2 sm:p-2.5 rounded-lg font-medium transition-colors flex items-center gap-2 touch-manipulation ${
+                isFavorite
+                  ? 'bg-red-50 text-red-600 hover:bg-red-100'
+                  : 'bg-gray-50 text-gray-600 hover:bg-gray-100'
+              }`}
+            >
+              <Heart className={`w-4 h-4 sm:w-5 sm:h-5 ${isFavorite ? 'fill-current' : ''}`} />
+            </button>
+          </div>
         </div>
       </div>
     </div>
