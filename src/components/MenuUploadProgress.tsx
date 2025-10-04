@@ -55,6 +55,12 @@ export function MenuUploadProgress({ menuId, onComplete }: MenuUploadProgressPro
   const mountTimeRef = useRef<number>(Date.now());
   const minDisplayTime = 3000; // Minimum 3 seconds display time
   const completionScheduledRef = useRef(false); // Track if completion is already scheduled
+  const onCompleteRef = useRef(onComplete); // Capture callback to prevent stale closure
+
+  // Update ref when callback changes
+  useEffect(() => {
+    onCompleteRef.current = onComplete;
+  }, [onComplete]);
 
   // Add debugging
   useEffect(() => {
@@ -279,10 +285,12 @@ export function MenuUploadProgress({ menuId, onComplete }: MenuUploadProgressPro
               if (remainingTime > 0) {
                 console.log(`[MenuUploadProgress] Waiting ${remainingTime}ms before completing to show progress screen`);
                 setTimeout(() => {
-                  onComplete?.(status === 'completed');
+                  console.log('[MenuUploadProgress] Timeout fired, calling onComplete with status:', status === 'completed');
+                  onCompleteRef.current?.(status === 'completed');
                 }, remainingTime);
               } else {
-                onComplete?.(status === 'completed');
+                console.log('[MenuUploadProgress] Calling onComplete immediately with status:', status === 'completed');
+                onCompleteRef.current?.(status === 'completed');
               }
             }
           } catch (err) {
