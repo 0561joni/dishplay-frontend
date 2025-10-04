@@ -53,6 +53,14 @@ export function MenuUploadProgress({ menuId, onComplete }: MenuUploadProgressPro
   const processedSequencesRef = useRef<Set<string>>(new Set());
   const userIdRef = useRef(state.user?.id ?? '');
 
+  // Add debugging
+  useEffect(() => {
+    console.log('[MenuUploadProgress] Mounted for menu:', menuId);
+    return () => {
+      console.log('[MenuUploadProgress] Unmounted');
+    };
+  }, [menuId]);
+
   // Format time remaining
   useEffect(() => {
     userIdRef.current = state.user?.id ?? '';
@@ -154,7 +162,16 @@ export function MenuUploadProgress({ menuId, onComplete }: MenuUploadProgressPro
   }, [menuId]);
 
   const applyProgressData = useCallback((data: ProgressData) => {
+    console.log('[MenuUploadProgress] Applying progress data:', {
+      stage: data.stage,
+      progress: data.progress,
+      status: data.status,
+      hasSnapshot: !!data.items_snapshot,
+      hasImageUpdate: !!data.item_image_update
+    });
+
     if (Array.isArray(data.items_snapshot) && data.items_snapshot.length > 0 && !hasInitializedMenuRef.current) {
+      console.log('[MenuUploadProgress] Initializing menu skeleton with', data.items_snapshot.length, 'items');
       const placeholderMenu = buildMenuSkeleton(data.items_snapshot, data);
       dispatch({ type: 'SET_MENU', payload: placeholderMenu });
       hasInitializedMenuRef.current = true;
@@ -215,7 +232,7 @@ export function MenuUploadProgress({ menuId, onComplete }: MenuUploadProgressPro
         ws = new WebSocket(`${wsUrl}/api/menu/ws/progress/${menuId}`);
 
         ws.onopen = () => {
-          console.log('WebSocket connected');
+          console.log('[MenuUploadProgress] WebSocket connected to:', wsUrl);
           setIsConnected(true);
           setError(null);
         };
@@ -223,13 +240,20 @@ export function MenuUploadProgress({ menuId, onComplete }: MenuUploadProgressPro
         ws.onmessage = (event) => {
           try {
             const data: ProgressData = JSON.parse(event.data);
+            console.log('[MenuUploadProgress] WebSocket message received:', {
+              stage: data.stage,
+              progress: data.progress,
+              status: data.status,
+              message: data.message
+            });
             const status = applyProgressData(data);
 
             if (status === 'completed' || status === 'failed') {
+              console.log('[MenuUploadProgress] Processing complete, status:', status);
               onComplete?.(status === 'completed');
             }
           } catch (err) {
-            console.error('Failed to parse WebSocket message:', err);
+            console.error('[MenuUploadProgress] Failed to parse WebSocket message:', err, event.data);
           }
         };
 
@@ -310,13 +334,21 @@ export function MenuUploadProgress({ menuId, onComplete }: MenuUploadProgressPro
   }, [menuId, isConnected, onComplete, applyProgressData]);
 
   if (!progress) {
+    console.log('[MenuUploadProgress] No progress data yet, showing connecting screen');
     return (
       <div className="flex flex-col items-center justify-center p-8">
         <div className="animate-spin rounded-full h-8 w-8 border-2 border-blue-600 border-t-transparent mb-4"></div>
-        <p className="text-gray-600">Connecting...</p>
+        <p className="text-gray-600">Connecting to server...</p>
+        <p className="text-xs text-gray-500 mt-2">Menu ID: {menuId}</p>
       </div>
     );
   }
+
+  console.log('[MenuUploadProgress] Rendering progress screen:', {
+    stage: progress.stage,
+    progress: progress.progress,
+    status: progress.status
+  });
 
   const stageInfo = getStageInfo(progress.stage);
 

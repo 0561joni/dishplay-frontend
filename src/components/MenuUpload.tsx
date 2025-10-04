@@ -63,6 +63,8 @@ export function MenuUpload() {
       
       // Set the menu ID from the response and show progress
       if (uploadResponse.menu_id) {
+        console.log('[MenuUpload] Upload successful, menu ID:', uploadResponse.menu_id);
+        console.log('[MenuUpload] Showing progress component');
         setUploadingMenuId(uploadResponse.menu_id);
         setShowProgress(true);
         dispatch({ type: 'SET_LOADING', payload: false }); // Turn off simple loading
@@ -81,6 +83,7 @@ export function MenuUpload() {
   }, [dispatch, state.user]);
 
   const handleProgressComplete = useCallback(async (success: boolean) => {
+    console.log('[MenuUpload] Progress complete, success:', success, 'menuId:', uploadingMenuId);
     if (!success || !uploadingMenuId) {
       setError('Failed to process menu');
       setShowProgress(false);
@@ -128,6 +131,7 @@ export function MenuUpload() {
 
   // Show progress component when uploading
   if (showProgress && uploadingMenuId) {
+    console.log('[MenuUpload] Rendering MenuUploadProgress for menu:', uploadingMenuId);
     return (
       <MenuUploadProgress
         menuId={uploadingMenuId}
@@ -135,6 +139,8 @@ export function MenuUpload() {
       />
     );
   }
+
+  console.log('[MenuUpload] Rendering upload form, showProgress:', showProgress, 'menuId:', uploadingMenuId);
 
   return (
     <div className="max-w-2xl mx-auto p-4 sm:p-6">
