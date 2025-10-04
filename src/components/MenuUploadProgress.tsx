@@ -54,6 +54,7 @@ export function MenuUploadProgress({ menuId, onComplete }: MenuUploadProgressPro
   const userIdRef = useRef(state.user?.id ?? '');
   const mountTimeRef = useRef<number>(Date.now());
   const minDisplayTime = 3000; // Minimum 3 seconds display time
+  const completionScheduledRef = useRef(false); // Track if completion is already scheduled
 
   // Add debugging
   useEffect(() => {
@@ -71,6 +72,8 @@ export function MenuUploadProgress({ menuId, onComplete }: MenuUploadProgressPro
   useEffect(() => {
     hasInitializedMenuRef.current = false;
     processedSequencesRef.current.clear();
+    completionScheduledRef.current = false;
+    mountTimeRef.current = Date.now(); // Reset mount time for new menu
   }, [menuId]);
 
   useEffect(() => () => {
@@ -241,6 +244,11 @@ export function MenuUploadProgress({ menuId, onComplete }: MenuUploadProgressPro
 
         ws.onmessage = (event) => {
           try {
+            // Ignore pong messages from ping/pong heartbeat
+            if (event.data === 'pong') {
+              return;
+            }
+
             const data: ProgressData = JSON.parse(event.data);
             console.log('[MenuUploadProgress] WebSocket message received:', {
               stage: data.stage,
@@ -250,8 +258,9 @@ export function MenuUploadProgress({ menuId, onComplete }: MenuUploadProgressPro
             });
             const status = applyProgressData(data);
 
-            if (status === 'completed' || status === 'failed') {
+            if ((status === 'completed' || status === 'failed') && !completionScheduledRef.current) {
               console.log('[MenuUploadProgress] Processing complete, status:', status);
+              completionScheduledRef.current = true; // Mark as scheduled to prevent duplicates
 
               // Ensure minimum display time before calling onComplete
               const elapsed = Date.now() - mountTimeRef.current;
@@ -332,7 +341,9 @@ export function MenuUploadProgress({ menuId, onComplete }: MenuUploadProgressPro
           const data: ProgressData = await response.json();
           const status = applyProgressData(data);
 
-          if (status === 'completed' || status === 'failed') {
+          if ((status === 'completed' || status === 'failed') && !completionScheduledRef.current) {
+            completionScheduledRef.current = true; // Mark as scheduled to prevent duplicates
+
             // Ensure minimum display time before calling onComplete
             const elapsed = Date.now() - mountTimeRef.current;
             const remainingTime = Math.max(0, minDisplayTime - elapsed);
