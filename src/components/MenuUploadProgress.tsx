@@ -78,23 +78,48 @@ export function MenuUploadProgress({ menuId, onComplete }: MenuUploadProgressPro
     }
   };
 
-  // Get stage description
+  // Get stage description with fun, detailed messages
   const getStageDescription = (stage: string): string => {
     const stageDescriptions: Record<string, string> = {
-      initializing: 'Preparing your menu...',
-      image_processing: 'Optimizing image quality...',
-      image_processed: 'Image ready!',
-      extracting_menu: 'Reading menu items...',
-      menu_extracted: 'Menu items identified!',
-      saving_items: 'Saving menu items...',
-      items_saved: 'Menu items saved!',
-      searching_images: 'Finding delicious food photos...',
-      images_found: 'Images collected!',
-      saving_images: 'Saving images...',
-      finalizing: 'Finishing up...',
-      completed: 'All done! 🎉'
+      initializing: 'Rolling out the red carpet for your menu...',
+      image_processing: 'Polishing pixels and enhancing flavors...',
+      image_processed: 'Your menu photo is looking delicious!',
+      extracting_menu: 'Teaching our AI to read between the lines...',
+      menu_extracted: 'Found all your tasty treasures!',
+      semantic_search: 'Consulting our database of 13,000+ dishes...',
+      semantic_skipped: 'Preparing to search the web for food photos...',
+      semantic_complete: 'Database search complete!',
+      saving_items: 'Carefully arranging items on digital shelves...',
+      items_saved: 'Menu items safely stored!',
+      searching_images: 'Scouring the internet for the perfect food shots...',
+      images_found: 'Collected a gallery of delicious photos!',
+      saving_images: 'Filing away these beautiful food pics...',
+      finalizing: 'Adding the finishing touches...',
+      completed: 'Your menu is ready to wow customers! 🎉'
     };
-    return stageDescriptions[stage] || 'Processing...';
+    return stageDescriptions[stage] || 'Working our culinary magic...';
+  };
+
+  // Get detailed stage info with icons
+  const getStageInfo = (stage: string): { emoji: string; color: string } => {
+    const stageInfo: Record<string, { emoji: string; color: string }> = {
+      initializing: { emoji: '🎬', color: 'text-purple-600' },
+      image_processing: { emoji: '✨', color: 'text-blue-600' },
+      image_processed: { emoji: '📸', color: 'text-green-600' },
+      extracting_menu: { emoji: '🔍', color: 'text-orange-600' },
+      menu_extracted: { emoji: '📋', color: 'text-green-600' },
+      semantic_search: { emoji: '🗄️', color: 'text-indigo-600' },
+      semantic_skipped: { emoji: '🌐', color: 'text-blue-600' },
+      semantic_complete: { emoji: '✅', color: 'text-green-600' },
+      saving_items: { emoji: '💾', color: 'text-blue-600' },
+      items_saved: { emoji: '✅', color: 'text-green-600' },
+      searching_images: { emoji: '🔎', color: 'text-yellow-600' },
+      images_found: { emoji: '🖼️', color: 'text-green-600' },
+      saving_images: { emoji: '📦', color: 'text-blue-600' },
+      finalizing: { emoji: '🎨', color: 'text-purple-600' },
+      completed: { emoji: '🎉', color: 'text-green-600' }
+    };
+    return stageInfo[stage] || { emoji: '⚡', color: 'text-gray-600' };
   };
 
   const buildMenuSkeleton = useCallback((snapshot: ItemSnapshot[], data: ProgressData): Menu => {
@@ -293,74 +318,151 @@ export function MenuUploadProgress({ menuId, onComplete }: MenuUploadProgressPro
     );
   }
 
+  const stageInfo = getStageInfo(progress.stage);
+
   return (
-    <div className="max-w-md mx-auto p-6">
-      <div className="bg-white rounded-lg shadow-lg p-6">
-        <div className="text-center mb-6">
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">Processing Your Menu</h2>
+    <div className="max-w-2xl mx-auto p-4 sm:p-6">
+      <div className="bg-gradient-to-br from-white to-gray-50 rounded-2xl shadow-2xl p-6 sm:p-8 border border-gray-100">
+        {/* Header */}
+        <div className="text-center mb-8">
+          <div className="inline-block mb-4">
+            <div className="relative">
+              <div className={`text-6xl sm:text-7xl ${stageInfo.color} animate-bounce`}>
+                {stageInfo.emoji}
+              </div>
+              <div className="absolute -inset-2 bg-gradient-to-r from-blue-400 to-purple-400 rounded-full opacity-20 blur-xl animate-pulse"></div>
+            </div>
+          </div>
+          <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
+            Crafting Your Menu
+          </h2>
           {progress.item_count > 0 && (
-            <p className="text-gray-600">{progress.item_count} items detected</p>
+            <div className="inline-flex items-center gap-2 bg-blue-50 text-blue-700 px-4 py-2 rounded-full text-sm font-medium">
+              <span className="text-xl">📋</span>
+              <span>{progress.item_count} delicious items discovered</span>
+            </div>
           )}
         </div>
 
-        <div className="space-y-4">
+        <div className="space-y-6">
           {/* Main loading message */}
-          <div className="flex items-center justify-center gap-3 min-h-[3rem]">
-            <span className="text-lg font-medium text-gray-700">{progress.message.text}</span>
-            <span className="text-2xl">{progress.message.emoji}</span>
-          </div>
+          <div className="bg-white rounded-xl p-6 shadow-md border border-gray-100">
+            <div className="flex items-center justify-center gap-3 mb-3">
+              <span className="text-xl sm:text-2xl font-semibold text-gray-800">
+                {progress.message.text}
+              </span>
+              <span className="text-3xl sm:text-4xl animate-pulse">
+                {progress.message.emoji}
+              </span>
+            </div>
 
-          {/* Stage description */}
-          <p className="text-center text-gray-600">{getStageDescription(progress.stage)}</p>
+            {/* Stage description */}
+            <p className="text-center text-gray-600 text-sm sm:text-base font-medium">
+              {getStageDescription(progress.stage)}
+            </p>
+          </div>
 
           {/* Progress bar */}
-          <div className="flex items-center gap-3">
-            <div className="flex-1 h-6 bg-gray-200 rounded-full overflow-hidden">
-              <div 
-                className="h-full bg-gradient-to-r from-blue-500 to-blue-600 transition-all duration-300 relative overflow-hidden"
-                style={{ width: `${progress.progress}%` }}
-              >
-                <div className="absolute inset-0 bg-white/20 animate-pulse"></div>
+          <div className="space-y-2">
+            <div className="flex items-center gap-3">
+              <div className="flex-1 h-8 bg-gray-200 rounded-full overflow-hidden shadow-inner">
+                <div
+                  className="h-full bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 transition-all duration-500 ease-out relative overflow-hidden"
+                  style={{ width: `${progress.progress}%` }}
+                >
+                  {/* Animated shimmer effect */}
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-shimmer"></div>
+                </div>
               </div>
+              <span className="text-lg font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600 min-w-[55px] text-right">
+                {Math.round(progress.progress)}%
+              </span>
             </div>
-            <span className="text-sm font-semibold text-blue-600 min-w-[45px] text-right">
-              {Math.round(progress.progress)}%
-            </span>
+
+            {/* Progress percentage text */}
+            <div className="flex justify-between text-xs text-gray-500 px-1">
+              <span>Started</span>
+              <span>{Math.round(progress.progress)}% complete</span>
+              <span>Done!</span>
+            </div>
           </div>
 
-          {/* Time remaining */}
+          {/* Time remaining with visual timer */}
           {progress.estimated_time_remaining > 0 && progress.status === 'processing' && (
-            <p className="text-center text-gray-500 text-sm">
-              Estimated time remaining: {formatTimeRemaining(progress.estimated_time_remaining)}
-            </p>
+            <div className="bg-gradient-to-r from-orange-50 to-yellow-50 border border-orange-200 rounded-xl p-4">
+              <div className="flex items-center justify-center gap-3">
+                <span className="text-2xl">⏱️</span>
+                <div className="text-center">
+                  <p className="text-sm text-gray-600 mb-1">Estimated time remaining</p>
+                  <p className="text-xl font-bold text-orange-600">
+                    {formatTimeRemaining(progress.estimated_time_remaining)}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Fun facts while waiting */}
+          {progress.status === 'processing' && progress.estimated_time_remaining > 10 && (
+            <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+              <div className="flex items-start gap-3">
+                <span className="text-2xl">💡</span>
+                <div>
+                  <p className="text-sm font-semibold text-blue-900 mb-1">Did you know?</p>
+                  <p className="text-sm text-blue-700">
+                    We're analyzing your menu against our database of 13,000+ dishes to find the perfect images!
+                  </p>
+                </div>
+              </div>
+            </div>
           )}
 
           {/* Connection status */}
-          {error && (
-            <p className="text-center text-orange-600 text-sm">{error}</p>
-          )}
-          
-          <div className="flex items-center justify-center gap-2 text-xs text-gray-500">
-            <span className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-orange-500'}`} />
-            <span>{isConnected ? 'Live updates' : 'Checking progress...'}</span>
+          <div className="flex items-center justify-center gap-2">
+            <div className={`w-3 h-3 rounded-full ${isConnected ? 'bg-green-500 animate-pulse' : 'bg-orange-500'} shadow-lg`} />
+            <span className="text-xs font-medium text-gray-600">
+              {isConnected ? '🔴 Live updates' : '🔄 Checking progress...'}
+            </span>
           </div>
+
+          {error && (
+            <div className="bg-orange-50 border border-orange-200 text-orange-700 px-4 py-3 rounded-xl text-center text-sm">
+              ⚠️ {error}
+            </div>
+          )}
         </div>
 
         {/* Error state */}
         {progress.status === 'failed' && (
-          <div className="mt-6 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-center">
-            <p className="font-medium">❌ Menu processing failed</p>
-            <p className="text-sm mt-1">Please try again with a different image</p>
+          <div className="mt-6 bg-red-50 border-2 border-red-300 text-red-700 px-6 py-4 rounded-xl text-center shadow-lg">
+            <p className="text-xl font-bold mb-2">❌ Oops! Something went wrong</p>
+            <p className="text-sm">Please try again with a clearer menu image</p>
           </div>
         )}
 
         {/* Success state */}
         {progress.status === 'completed' && (
-          <div className="mt-6 bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg text-center">
-            <p className="font-medium">✅ Menu processed successfully!</p>
+          <div className="mt-6 bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-300 text-green-700 px-6 py-4 rounded-xl text-center shadow-lg">
+            <p className="text-xl font-bold mb-2">🎉 Success!</p>
+            <p className="text-sm">Your menu is ready and looking delicious!</p>
           </div>
         )}
       </div>
+
+      {/* Add shimmer animation CSS */}
+      <style>{`
+        @keyframes shimmer {
+          0% {
+            transform: translateX(-100%);
+          }
+          100% {
+            transform: translateX(100%);
+          }
+        }
+        .animate-shimmer {
+          animation: shimmer 2s infinite;
+        }
+      `}</style>
     </div>
   );
 }
