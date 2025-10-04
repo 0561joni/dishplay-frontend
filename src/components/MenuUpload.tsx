@@ -93,13 +93,23 @@ export function MenuUpload() {
 
     try {
       // Get the processed menu data
+      console.log('[MenuUpload] Fetching complete menu from database:', uploadingMenuId);
       const token = await getAuthToken();
       if (!token) throw new Error('Authentication required');
-      
+
       const menuData = await api.menu.getMenu(uploadingMenuId, token);
-      
+      console.log('[MenuUpload] Received menu data:', {
+        itemCount: menuData.items?.length,
+        firstItemImages: menuData.items?.[0]?.images?.length
+      });
+
       // Transform and set the menu data
       const transformedMenu = transformMenuResponse(menuData, state.user?.id || '');
+      console.log('[MenuUpload] Transformed menu, dispatching SET_MENU:', {
+        itemCount: transformedMenu.items?.length,
+        firstItemStatus: transformedMenu.items?.[0]?.imageStatus,
+        firstItemImages: transformedMenu.items?.[0]?.images
+      });
 
       dispatch({ type: 'SET_MENU', payload: transformedMenu });
       
